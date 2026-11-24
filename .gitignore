@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/.nyc_output/
+/.test-build/
+/.admin-build/
 
 # next.js
 /.next/
@@ -29,9 +32,15 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+/debug.log
+*.tmp
 
-# env files (can opt-in for committing if needed)
+# env files: keep credentials local; only the placeholder template is tracked
 .env*
+!.env.example
+
+# Netlify CLI state
+.netlify
 
 # vercel
 .vercel
@@ -39,3 +48,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local E2E screenshots (never publish customer data)
+/.e2e-artifacts/

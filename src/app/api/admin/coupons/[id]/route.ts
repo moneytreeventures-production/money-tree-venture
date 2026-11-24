@@ -1,0 +1,4 @@
+import { isTrustedMutationOrigin } from "@/lib/http/mutation-origin";
+import { deactivateCoupon, saveCoupon } from "@/lib/coupons/service";
+export async function PATCH(r:Request,c:{params:Promise<{id:string}>}) { try { if(!isTrustedMutationOrigin(r))return Response.json({error:"Invalid origin"},{status:403}); return Response.json(await saveCoupon(await r.json(),(await c.params).id)); } catch { return Response.json({error:"Coupon could not be updated."},{status:400}); } }
+export async function DELETE(r:Request,c:{params:Promise<{id:string}>}) { try { if(!isTrustedMutationOrigin(r))return Response.json({error:"Invalid origin"},{status:403}); return Response.json(await deactivateCoupon((await c.params).id)); } catch { return Response.json({error:"Coupon could not be deactivated."},{status:400}); } }

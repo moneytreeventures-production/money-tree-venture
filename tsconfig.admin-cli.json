@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "noEmitOnError": true,
+    "incremental": false,
+    "outDir": ".admin-build",
+    "rootDir": "."
+  },
+  "include": [
+    "scripts/bootstrap-admin.ts",
+    "scripts/initialize-indexes.ts",
+    "scripts/seed/products.ts",
+    "scripts/seed/product-seed-plan.ts",
+    "scripts/seed/source-products.ts",
+    "scripts/maintain-orders.ts",
+    "scripts/diagnose-payment-recovery.ts",
+    "scripts/recover-expired-payment.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

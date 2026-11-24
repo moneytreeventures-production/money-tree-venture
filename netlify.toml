@@ -1,0 +1,5 @@
+[functions."process-outbox"]
+  schedule = "*/15 * * * *"
+
+[functions."expire-orders"]
+  schedule = "*/15 * * * *"

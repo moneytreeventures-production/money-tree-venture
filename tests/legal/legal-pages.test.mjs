@@ -88,7 +88,7 @@ test("authenticated order view remains a summary and secure PDF delivery stays d
   const downloadService = await source("src/lib/fulfillment/download-service.ts");
   assert.match(history, /These authenticated order summaries are not GST tax invoices/);
   assert.match(orderService, /OrderModel\.findOne\(\{ _id: id, userId \}\)/);
-  assert.match(orderService, /OrderModel\.find\(\{ userId, \$nor:/);
+  assert.match(orderService, /OrderModel\.find\(\{ userId \}\)/);
   assert.match(orderService, /lines\.map/);
   assert.doesNotMatch(history, /receipt download|GST invoice download/i);
   await assert.rejects(access(path.join(root, "src/app/api/orders/[id]/receipt/route.ts")));
@@ -101,12 +101,12 @@ test("billing page blocks receipts pending tax review without changing historica
   const billing = await source(pages.billing[0]);
   const schema = await source("src/lib/db/models/order.ts");
   const config = await source("src/lib/checkout/order-service.ts");
-  assert.match(billing, /production launch blocker/i);
+  assert.match(billing, /review before production launch/i);
   assert.match(billing, /not being issued/i);
   assert.match(schema, /taxPaise: \{ \.\.\.paise, default: 0, immutable: true \}/);
   assert.match(schema, /taxSnapshot/);
   assert.match(schema, /subtotalPaise: \{ \.\.\.paise, immutable: true \}/);
   assert.match(schema, /currency: \{ type: String, enum: \["INR"\], default: "INR", required: true, immutable: true \}/);
-  assert.match(config, /TAX_RATE_BPS/);
+  assert.doesNotMatch(config, /env\.TAX_RATE_BPS/);
   assert.ok(await stat(path.join(root, "src/app/account/page.tsx")));
 });

@@ -21,7 +21,7 @@ export function ProductMainMedia({ name, thumbnailRef, promotionalVideoUrl, vide
 
   if (video && !videoUnavailable) {
     return (
-      <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-border bg-[#0f1e36] shadow-[0_28px_70px_-45px_rgba(15,30,54,0.55)] sm:aspect-[1.3/1]">
+      <div className="mt-card relative aspect-[4/3] overflow-hidden rounded-3xl bg-[#0f1e36] sm:aspect-[1.3/1]">
         <video
           src={video}
           controls
@@ -37,7 +37,7 @@ export function ProductMainMedia({ name, thumbnailRef, promotionalVideoUrl, vide
   }
 
   return (
-    <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-border bg-surface-secondary shadow-[0_28px_70px_-45px_rgba(15,30,54,0.35)] sm:aspect-[1.3/1]">
+    <div className="mt-card relative aspect-[4/3] overflow-hidden rounded-3xl bg-surface-secondary sm:aspect-[1.3/1]">
       {thumbnail ? <Image src={thumbnail} alt={`${name} product thumbnail`} fill sizes="(max-width: 1024px) 100vw, 50vw" unoptimized className="object-cover" /> : <div className="grid size-full place-items-center bg-[linear-gradient(135deg,#e8edf3,#f4e4d8)]"><span className="grid size-20 place-items-center rounded-3xl border border-[#0f1e36]/10 bg-white/80 text-4xl font-semibold text-[#0f1e36]">{name.slice(0, 1).toUpperCase()}</span></div>}
       {videoUnavailable && <p className="absolute inset-x-4 bottom-4 rounded-xl bg-background/90 px-4 py-3 text-sm text-foreground-secondary" role="status">{videoUnavailableMessage}</p>}
       {!thumbnail && !videoUnavailable && <p className="absolute inset-x-4 bottom-4 rounded-xl bg-background/90 px-4 py-3 text-sm text-foreground-secondary">{previewUnavailableMessage}</p>}

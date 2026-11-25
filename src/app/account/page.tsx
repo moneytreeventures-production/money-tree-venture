@@ -7,11 +7,12 @@ import { getCustomerAccountOverview } from "@/lib/checkout/order-service";
 import { orderStatusLabel } from "@/lib/checkout/order-presentation";
 import { formatINR } from "@/lib/format/currency";
 import { AccountShell } from "@/components/account/account-shell";
+import { SkeletonAccountContent } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = { title: "Your account", robots: { index: false, follow: false } };
 
 export default function AccountPage() {
-  return <Suspense fallback={<main className="mx-auto max-w-6xl px-5 py-16 text-sm text-foreground-secondary" role="status">Loading your account...</main>}><AccountContent /></Suspense>;
+  return <Suspense fallback={<SkeletonAccountContent />}><AccountContent /></Suspense>;
 }
 
 async function AccountContent() {

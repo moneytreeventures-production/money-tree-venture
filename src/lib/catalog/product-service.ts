@@ -51,7 +51,7 @@ function validateAdminId(id: string): Types.ObjectId {
 
 async function ensureSlugAvailable(slug: string, excludeId?: Types.ObjectId): Promise<void> {
   const filter = excludeId ? { slug, _id: { $ne: excludeId } } : { slug };
-  if (await ProductModel.exists(filter)) throw productConflict("Yeh slug kisi aur product ke liye use ho raha hai.");
+  if (await ProductModel.exists(filter)) throw productConflict("This URL slug is already used by another product.");
 }
 
 function isDuplicateKeyError(error: unknown): boolean {
@@ -173,7 +173,7 @@ export async function createProduct(input: unknown, adminUserId: string) {
   try {
     await saveProductWithAudit(product, adminId, "product.created", ["product"]);
   } catch (error) {
-    if (isDuplicateKeyError(error)) throw productConflict("Yeh slug kisi aur product ke liye use ho raha hai.");
+    if (isDuplicateKeyError(error)) throw productConflict("This URL slug is already used by another product.");
     throw error;
   }
   return product.toObject();
@@ -233,7 +233,7 @@ export async function updateProduct(id: string, input: unknown, adminUserId: str
   try {
     await saveProductWithAudit(product, adminId, "product.updated", Object.keys(data));
   } catch (error) {
-    if (isDuplicateKeyError(error)) throw productConflict("Yeh slug kisi aur product ke liye use ho raha hai.");
+    if (isDuplicateKeyError(error)) throw productConflict("This URL slug is already used by another product.");
     if (error instanceof mongoose.Error.VersionError) throw new ConflictError("Product was updated elsewhere. Reload it and try again.");
     throw error;
   }
@@ -361,7 +361,7 @@ export async function changeProductStatus(id: string, input: unknown, adminUserI
       publicationStatus: "published",
       includedProductIds: product._id,
     });
-    if (publishedBundleCount > 0) throw productConflict("Pehle is PDF ko use karne wale published bundles unpublish ya archive karein.");
+    if (publishedBundleCount > 0) throw productConflict("Unpublish or archive the bundles that include this PDF first.");
   }
 
   product.publicationStatus = data.status;
@@ -387,7 +387,7 @@ export async function deleteProduct(id: string, adminUserId: string): Promise<vo
   const product = await ProductModel.findById(productId);
   if (!product) throw new NotFoundError();
   if (product.publicationStatus === "published") {
-    throw productConflict("Pehle product unpublish ya archive karein, phir delete karein.");
+    throw productConflict("Unpublish or archive this product before deleting it.");
   }
   const referencedByBundle = await ProductModel.exists({ _id: { $ne: productId }, includedProductIds: productId });
   const [hasOrders, hasPurchases, hasBookings, hasCouponRestrictions, hasOutboxReferences] = await Promise.all([
@@ -398,7 +398,7 @@ export async function deleteProduct(id: string, adminUserId: string): Promise<vo
     OutboxEventModel.exists({ "payload.productIds": productId }),
   ]);
   if (referencedByBundle || hasOrders || hasPurchases || hasBookings || hasCouponRestrictions || hasOutboxReferences) {
-    throw productConflict("Is product ka order, entitlement, booking, coupon ya bundle reference hai. Records preserve karne ke liye archive karein.");
+    throw productConflict("This product is linked to an order, entitlement, booking, coupon, or bundle. Archive it to preserve those records.");
   }
   if (product.publicationStatus === "draft") {
     // Stop future publication/order races before contacting storage. If storage fails, the safe archived record remains.
@@ -412,7 +412,7 @@ export async function deleteProduct(id: string, adminUserId: string): Promise<vo
       PurchaseModel.exists({ "bundleItems.assetId": { $in: assetIds } }),
       PersonalizedPdfModel.exists({ sourceAssetId: { $in: assetIds } }),
     ]);
-    if (referencedAsset.some(Boolean)) throw productConflict("PDF version customer purchase se juda hai. Access preserve karne ke liye product archive karein.");
+    if (referencedAsset.some(Boolean)) throw productConflict("A PDF version is linked to a customer purchase. Archive the product to preserve access.");
     // R2 delete is idempotent. Database records are kept if the provider rejects any delete.
     const storage = getR2Storage();
     for (const asset of assets) await storage.delete(asset.objectKey);

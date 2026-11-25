@@ -1,10 +1,37 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildBookingMessage, buildPurchaseConfirmation, buildRefundConfirmation, isTransactionalEmailEligible, outboxRetryDelayMs } from "../../src/lib/email/outbox-service";
-import { buildResendRequest } from "../../src/lib/email/resend";
-import { createOutboxRouteHandler } from "../../src/lib/email/outbox-route-handler";
+import { buildBookingMessage, buildPurchaseConfirmation, buildRefundConfirmation, isTransactionalEmailEligible, outboxRetryDelayMs, transactionalRecipientAllowed } from "../../src/lib/email/outbox-service";
+
+test("transactional recipients are restricted by stored payment environment", () => {
+  const approved = { gatewayEnvironment: "sandbox", recipient: "owner@example.test", allowed: "owner@example.test" };
+  assert.equal(transactionalRecipientAllowed(approved), true);
+  assert.equal(transactionalRecipientAllowed({ ...approved, recipient: "buyer@example.test" }), false);
+  assert.equal(transactionalRecipientAllowed({ ...approved, allowed: undefined }), false);
+  assert.equal(transactionalRecipientAllowed({ ...approved, gatewayEnvironment: undefined }), false);
+  assert.equal(transactionalRecipientAllowed({ gatewayEnvironment: "production", recipient: "buyer@example.test" }), true);
+  assert.equal(transactionalRecipientAllowed({ gatewayEnvironment: "production", recipient: "invalid" }), false);
+});
+import { buildResendRequest, parseResendAcceptance } from "../../src/lib/email/resend";
+
+import { createOutboxRouteHandler, localWorkerCutoffAllowed } from "../../src/lib/email/outbox-route-handler";
+
+test("local worker cutoff requires explicit local database and enablement", () => {
+  const valid = { enabled: "true", nodeEnv: "development", appUrl: "http://localhost:3000", database: "moneytreeventures", testDatabase: "moneytreeventures", role: "local-development-only" };
+  assert.equal(localWorkerCutoffAllowed(valid), true);
+  assert.equal(localWorkerCutoffAllowed({ ...valid, enabled: undefined }), false);
+  assert.equal(localWorkerCutoffAllowed({ ...valid, database: "moneytreeventures_staging" }), false);
+  assert.equal(localWorkerCutoffAllowed({ ...valid, nodeEnv: "production" }), false);
+  assert.equal(localWorkerCutoffAllowed({ ...valid, netlify: "true" }), false);
+});
 import { buildOrderPurchaseConfirmationEvent } from "../../src/lib/fulfillment/purchase-confirmation-event";
 import { Types } from "mongoose";
+
+test("Resend acceptance requires a provider message ID and distinguishes safe failure categories", async () => {
+  assert.equal(await parseResendAcceptance(Response.json({ id: "message_123" })), "message_123");
+  await assert.rejects(parseResendAcceptance(Response.json({}, { status: 200 })), /RESEND_ACCEPTANCE_MISSING/);
+  await assert.rejects(parseResendAcceptance(Response.json({ message: "private provider detail" }, { status: 401 })), /RESEND_AUTHENTICATION_REJECTED_401/);
+  await assert.rejects(parseResendAcceptance(Response.json({}, { status: 429 })), /RESEND_RATE_LIMITED_429/);
+});
 
 test("purchase confirmation event is order-scoped and has a stable deduplication key", () => {
   const orderId = new Types.ObjectId("64b64c000000000000000101");
@@ -97,4 +124,12 @@ test("outbox endpoint validates a bounded batch and invokes the worker only afte
   const valid = await handler(new Request("https://example.test/api/internal/outbox?limit=3", { method: "POST", headers: { authorization: "Bearer server-secret-value-1234567890123456" } }));
   assert.equal(valid.status, 200);
   assert.equal(receivedLimit, 3);
+});
+
+test("worker authorization requires the Bearer scheme", async () => {
+  const handler = createOutboxRouteHandler(async () => ({ sent: 0, retried: 0, deadLetter: 0 }), () => "test-worker-secret");
+  for (const header of ["test-worker-secret", "Basic test-worker-secret", "Bearer wrong-secret"]) {
+    assert.equal((await handler(new Request("https://example.test/api/internal/outbox", { method: "POST", headers: { authorization: header } }))).status, 401);
+  }
+  assert.equal((await handler(new Request("https://example.test/api/internal/outbox", { method: "POST", headers: { authorization: "bearer test-worker-secret" } }))).status, 200);
 });

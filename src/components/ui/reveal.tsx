@@ -1,7 +1,10 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
-import type { ComponentProps, ReactNode } from "react";
+import { motion, useInView, useReducedMotion } from "motion/react";
+import { useRef, useSyncExternalStore, type ComponentProps, type ReactNode } from "react";
+import { interactionMotion } from "./motion-patterns";
+
+const subscribe = () => () => undefined;
 
 type RevealProps = {
   children: ReactNode;
@@ -15,14 +18,19 @@ export default function Reveal({
   className,
   ...props
 }: RevealProps) {
+  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
   const shouldReduceMotion = useReducedMotion();
+  const reduceMotion = mounted && shouldReduceMotion;
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.18 });
 
   return (
     <motion.div
-      initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
-      whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.18 }}
-      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
+      ref={ref}
+      data-mt-reveal=""
+      initial={false}
+      animate={mounted && inView && !reduceMotion ? { y: [8, 0] } : { y: 0 }}
+      transition={{ ...interactionMotion.reveal.transition, duration: reduceMotion ? 0 : interactionMotion.reveal.transition.duration, delay }}
       className={className}
       {...props}
     >

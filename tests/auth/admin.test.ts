@@ -168,7 +168,7 @@ test("protected admin route redirects anonymous sessions and denies customer pro
   assert.match(layout, /resolveAdminRouteAccess\(requireAdmin\)/);
   assert.equal(await resolveAdminRouteAccess(async () => { throw new AuthenticationError(); }), "authentication");
   assert.equal(await resolveAdminRouteAccess(async () => { throw new AuthorizationError(); }), "authorization");
-  assert.match(layout, /Is area ke liye access nahi hai/);
+  assert.match(layout, /Admin access unavailable/);
   assert.match(layout, /redirect\("\/admin\/login"\)/);
 });
 

@@ -13,7 +13,33 @@ import {
   isApprovedLegacyPurchaseIndex,
   parseIndexInitializationArgs,
   shouldDropLegacyRefundIndex,
+  compareManagedIndexes,
+  managedModels,
+  emailTestRateIndexDefinition,
 } from "../../scripts/initialize-indexes";
+
+test("managed inventory includes review and support collections", () => {
+  const names = managedModels.map((model) => model.collection.collectionName);
+  for (const name of ["reviews", "supportRequests", "supportRates", "purchases", "checkoutClaims", "outboxEvents"]) assert.ok(names.includes(name));
+  assert.equal(new Set(names).size, names.length);
+});
+
+test("email test migration derives its unique rate index from the active model", () => {
+  const index = emailTestRateIndexDefinition();
+  assert.deepEqual(index.key, { identityHash: 1, windowStart: 1 });
+  assert.equal(index.unique, true);
+  assert.deepEqual(compareManagedIndexes([index], [index]), { missing: [], incompatible: [] });
+  assert.deepEqual(compareManagedIndexes([index], [{ ...index, unique: false }]), { missing: [], incompatible: [index.name] });
+});
+
+test("index comparison detects missing names and incompatible security options", () => {
+  const expected = [{ name: "active_claim", key: { userId: 1, productId: 1 }, unique: true, partialFilterExpression: { status: "active" } }];
+  assert.deepEqual(compareManagedIndexes(expected, []), { missing: ["active_claim"], incompatible: [] });
+  assert.deepEqual(compareManagedIndexes(expected, [{ name: "active_claim", key: { productId: 1, userId: 1 }, unique: true, partialFilterExpression: { status: "active" } }]), { missing: [], incompatible: ["active_claim"] });
+  assert.deepEqual(compareManagedIndexes(expected, [{ name: "active_claim", key: { userId: 1, productId: 1 }, unique: false }]), { missing: [], incompatible: ["active_claim"] });
+  assert.deepEqual(compareManagedIndexes(expected, expected), { missing: [], incompatible: [] });
+  assert.deepEqual(compareManagedIndexes([{ key: { identityHash: 1, windowStart: 1 } }], [{ name: "identityHash_1_windowStart_1", key: { identityHash: 1, windowStart: 1 } }]), { missing: [], incompatible: [] });
+});
 
 test("index initialization requires the exact database name and keeps legacy-index removal explicit", () => {
   assert.deepEqual(parseIndexInitializationArgs(["--confirm-database", "moneytree_test"]), {

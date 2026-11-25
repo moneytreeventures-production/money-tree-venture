@@ -19,14 +19,14 @@ function LinkList({ title, links }: { title: string; links: ReadonlyArray<readon
   return <nav aria-label={title}>
     <h2 className="text-[10px] font-bold tracking-[0.17em] text-foreground">{title}</h2>
     <ul className="mt-4 flex flex-col items-start gap-3">
-      {links.map(([label, href]) => <li key={href}><Link href={href} className="group inline-flex min-h-6 items-center gap-1.5 text-sm text-foreground-secondary transition-colors hover:text-foreground focus-visible:rounded-sm">{label}<ArrowUpRight size={13} aria-hidden="true" className="text-accent-foreground opacity-0 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" /></Link></li>)}
+      {links.map(([label, href]) => <li key={href}><Link href={href} className="group inline-flex min-h-11 items-center gap-1.5 text-sm text-foreground-secondary transition-colors hover:text-foreground focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">{label}<ArrowUpRight size={13} aria-hidden="true" className="text-accent-foreground opacity-0 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" /></Link></li>)}
     </ul>
   </nav>;
 }
 
 export default function Footer() {
   return <footer className="border-t border-border bg-background">
-    <div className="mx-auto max-w-[1360px] px-5 pb-7 pt-12 sm:px-8 sm:pt-14 lg:px-12">
+    <div className="mt-container pb-7 pt-12 sm:pt-14">
       <div className="grid gap-10 border-b border-border pb-10 sm:grid-cols-2 sm:gap-12 lg:grid-cols-[1.2fr_.8fr_1.2fr] lg:pb-12">
         <div>
           <Link href="/" aria-label="MoneyTreeVentures — homepage" className="inline-flex items-center gap-3">

@@ -27,10 +27,8 @@ test("accepts minimal development configuration and applies safe defaults", () =
   assert.equal(env.CASHFREE_CLIENT_SECRET, undefined);
 });
 
-test("accepts only an explicitly configured integer tax rate in basis points", () => {
-  assert.equal(parseServerEnv({ TAX_RATE_BPS: "1800" }).TAX_RATE_BPS, 1800);
-  assert.throws(() => parseServerEnv({ TAX_RATE_BPS: "18%" }), /TAX_RATE_BPS/);
-  assert.throws(() => parseServerEnv({ TAX_RATE_BPS: "10001" }), /TAX_RATE_BPS/);
+test("legacy TAX_RATE_BPS does not block new-order environment parsing", () => {
+  assert.doesNotThrow(() => parseServerEnv({ TAX_RATE_BPS: "18%" }));
 });
 
 test("requires the rest of an integration group after MongoDB configuration begins", () => {

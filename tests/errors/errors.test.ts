@@ -132,7 +132,7 @@ test("unexpected errors and non-operational application errors use generic publi
 
   const nonOperational = normalizeError(new ApplicationError("internal-only", { code: "SECRET_INTERNAL_CODE", statusCode: 500, operational: false }));
   assert.equal(nonOperational.code, "INTERNAL_ERROR");
-  assert.equal(nonOperational.message, "Kuch gadbad ho gayi. Dobara try karein.");
+  assert.equal(nonOperational.message, "Something went wrong. Please try again.");
 });
 
 test("normalization does not throw for malformed error-like values", () => {

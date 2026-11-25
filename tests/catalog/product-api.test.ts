@@ -110,7 +110,7 @@ test("admin product listing reports a safe service error response", async () => 
   });
   const response = await handlers.adminCollectionGET(new Request("https://example.test/api/admin/products"), undefined);
   assert.equal(response.status, 404);
-  assert.equal((await response.json() as { error: { message: string } }).error.message, "Yeh jaankari nahi mili.");
+  assert.equal((await response.json() as { error: { message: string } }).error.message, "The requested information was not found.");
 });
 
 test("admin delete API forwards the trusted admin and blocks unauthorized access", async () => {

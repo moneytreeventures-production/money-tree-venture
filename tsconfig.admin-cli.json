@@ -12,6 +12,7 @@
   "include": [
     "scripts/bootstrap-admin.ts",
     "scripts/initialize-indexes.ts",
+    "scripts/email-test-resend.ts",
     "scripts/seed/products.ts",
     "scripts/seed/product-seed-plan.ts",
     "scripts/seed/source-products.ts",

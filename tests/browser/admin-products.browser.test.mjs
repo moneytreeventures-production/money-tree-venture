@@ -57,7 +57,7 @@ test("admin product listing renders valid, empty, incomplete, legacy, and multip
       const malformed = Array.from(populated.querySelectorAll('article')).find((row) => row.querySelector('h2')?.textContent === 'Legacy title only');
       if (!malformed || !malformed.textContent.includes('Legacy title is shown temporarily')) problems.push('legacy data warning missing');
       if (malformed && !Array.from(malformed.querySelectorAll('button')).find((button) => button.textContent === 'Publish')?.disabled) problems.push('invalid record could still be published');
-      if (!empty.textContent.includes('Is filter ke liye koi product nahi mila.')) problems.push('empty collection state missing');
+      if (!empty.textContent.includes('No products match these filters.')) problems.push('empty collection state missing');
       document.body.dataset.browserResult = problems.length ? 'fail' : 'pass';
       document.body.dataset.browserProblems = problems.join('|');
     </script></body></html>`;

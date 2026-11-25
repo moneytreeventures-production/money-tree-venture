@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { getAdminDashboardCounts } from "@/lib/catalog/admin-dashboard-service";
 import { ManageProductsLink } from "@/components/admin/manage-products-link";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminHomePage() {
   return (
@@ -51,5 +52,5 @@ async function DashboardOverview() {
 }
 
 function DashboardOverviewFallback() {
-  return <section aria-label="Workspace totals loading" className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="status"><p className="rounded-2xl border border-border bg-surface p-6 text-sm text-foreground-secondary">Loading workspace totals...</p></section>;
+  return <section aria-label="Workspace totals loading" className="mt-9"><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">{[0, 1, 2, 3, 4].map((index) => <div key={index} className="rounded-2xl border border-border bg-surface p-6"><Skeleton className="h-4 w-24" /><Skeleton className="mt-4 h-10 w-16" /><Skeleton className="mt-4 h-4 w-2/3" /></div>)}</div><span className="sr-only" role="status">Loading workspace totals...</span></section>;
 }

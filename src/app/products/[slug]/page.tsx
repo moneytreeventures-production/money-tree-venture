@@ -33,6 +33,7 @@ function typeLabel(product: Awaited<ReturnType<typeof getPublicProductPageData>>
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   if (!productSlugSchema.safeParse(slug).success) return { title: "Product not found", robots: { index: false, follow: false } };
+  await connection();
   try {
     const { product } = await getPageData(slug);
     const thumbnail = safeImageSource(product.imageRefs?.[0]);
@@ -61,18 +62,18 @@ async function ProductContent({ params }: PageProps) {
   const { product, categories, includedProducts } = data;
   const bundleKind = product.bundleKind === "starter_kit" ? "PDF starter kit" : "PDF bundle";
 
-  return <><article className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 sm:py-14 lg:py-16">
-      <Link href="/products" className="inline-flex min-h-10 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground-secondary transition-colors hover:bg-surface-secondary">← Back to products</Link>
+  return <><article className="mt-container max-w-6xl py-10 sm:py-14 lg:py-16">
+      <Link href="/products" className="mt-button mt-button-outline min-h-10 px-4 text-foreground-secondary">← Back to products</Link>
     <div className="mt-7 grid items-start gap-9 lg:grid-cols-[1.05fr_.95fr] lg:gap-14">
       <ProductMainMedia name={product.name} thumbnailRef={product.imageRefs?.[0]} promotionalVideoUrl={product.promotionalVideoUrl} videoUnavailableMessage="The video could not be played. The product thumbnail is shown instead." previewUnavailableMessage="Product preview is currently unavailable." />
       <div className="lg:py-3">
         <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-accent/15 px-3 py-1.5 text-[10px] font-bold tracking-[0.12em] text-accent-foreground">{typeLabel(product)}</span>{product.featured && <span className="rounded-full border border-border px-3 py-1.5 text-[10px] font-semibold text-foreground-secondary">Featured</span>}{product.productType === "pdf_bundle" && <span className="rounded-full border border-border px-3 py-1.5 text-[10px] font-semibold text-foreground-secondary">{bundleKind}</span>}</div>
         <p className="mt-5 break-all text-xs font-medium text-foreground-secondary">/products/{product.slug}</p>
-        <h1 className="mt-3 text-4xl font-semibold leading-[1.02] tracking-[-0.055em] text-foreground sm:text-5xl">{product.name}</h1>
+        <h1 className="mt-3 text-4xl font-semibold leading-[1.02] tracking-[-0.05em] text-foreground [text-wrap:balance] sm:text-5xl">{product.name}</h1>
         <p className="mt-5 text-base leading-7 text-foreground-secondary">{product.shortDescription}</p>
         <p className="mt-2 text-xs leading-5 text-foreground-secondary">Product descriptions and included-content details are shown in the language provided by the publisher.</p>
         {product.productType === "call_guidance" && product.callDurationMinutes && <p className="mt-4 text-sm font-medium text-foreground-secondary">{`${product.callDurationMinutes} minute session`}</p>}
-        <div className="mt-7 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-y border-border py-5"><span className="text-3xl font-semibold tracking-tight text-foreground">{formatINR(product.pricePaise)}</span>{product.compareAtPricePaise !== undefined && product.compareAtPricePaise > product.pricePaise && <span className="text-base text-foreground-secondary line-through">{formatINR(product.compareAtPricePaise)}</span>}<span className="w-full text-xs text-foreground-secondary">INR · Final payable amount and any configured inclusive tax component are shown at checkout. <Link href="/billing-information" className="underline underline-offset-2">Billing details</Link>.</span></div>
+        <div className="mt-7 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-y border-border py-5"><span className="text-3xl font-semibold tracking-tight text-foreground">{formatINR(product.pricePaise)}</span>{product.compareAtPricePaise !== undefined && product.compareAtPricePaise > product.pricePaise && <span className="text-base text-foreground-secondary line-through">{formatINR(product.compareAtPricePaise)}</span>}<span className="w-full text-xs text-foreground-secondary">Price in INR. Review the final amount payable at checkout. <Link href="/billing-information" className="underline underline-offset-2">Billing details</Link>.</span></div>
         <div className="mt-5"><ProductPurchaseAction productId={String(product._id)} productName={product.name} productType={product.productType} pricePaise={product.pricePaise} /></div>
         <div className="mt-7"><h2 className="text-xs font-bold uppercase tracking-[0.15em] text-foreground-secondary">Category</h2>{categories.length ? <ul className="mt-2 flex flex-wrap gap-2">{categories.map((category) => <li key={category.id} className="rounded-full border border-border px-3 py-1.5 text-sm text-foreground">{category.name}</li>)}</ul> : <p className="mt-2 text-sm text-foreground-secondary">Unavailable</p>}</div>
       </div>

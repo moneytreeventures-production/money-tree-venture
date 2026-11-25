@@ -118,7 +118,6 @@ export const serverEnvSchema = z
 
     OUTBOX_WORKER_SECRET: z.string().trim().min(32, "must be at least 32 characters").optional(),
     DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(1).max(900).default(60),
-    TAX_RATE_BPS: z.string().regex(/^\d+$/, "must be an integer tax rate in basis points").transform(Number).pipe(z.number().int().min(0).max(10_000)).optional(),
   })
   .superRefine((values, context) => {
     for (const group of integrationGroups) {

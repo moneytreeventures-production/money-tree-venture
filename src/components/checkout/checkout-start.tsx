@@ -9,6 +9,7 @@ import { useCart } from "@/components/cart/cart-provider";
 import { checkoutOrderRequest, checkoutSignature, clearCheckoutIdempotencyKey, getCheckoutIdempotencyKey } from "@/lib/checkout/client-idempotency";
 import { checkoutOrderErrorMessage } from "@/lib/checkout/order-error";
 import { formatINR } from "@/lib/format/currency";
+import { SkeletonCheckoutSummary } from "@/components/ui/skeleton";
 
 interface CreateOrderResponse {
   success: boolean;
@@ -109,7 +110,7 @@ export default function CheckoutStart() {
   }
 
   if (!ready || isPending) {
-    return <main className="mx-auto flex min-h-[50vh] max-w-3xl items-center justify-center gap-3 px-5 text-sm text-foreground-secondary" role="status"><LoaderCircle size={18} className="animate-spin" /> Preparing checkout…</main>;
+    return <SkeletonCheckoutSummary />;
   }
 
   if (sessionError) {
@@ -120,7 +121,11 @@ export default function CheckoutStart() {
     <main className="mx-auto w-full min-w-0 max-w-3xl px-4 py-10 sm:px-8 sm:py-16">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-foreground">MoneyTreeVentures · Secure checkout</p>
       <h1 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Prepare your order.</h1>
-      <p className="mt-3 text-sm leading-7 text-foreground-secondary">Your final price, applicable tax, availability and coupon will be confirmed here. Cashfree Hosted Checkout opens in the next step.</p>
+      <p className="mt-3 text-sm leading-7 text-foreground-secondary">Your final price, availability and any coupon discount will be confirmed here. Cashfree Hosted Checkout opens in the next step.</p>
+      <nav aria-label="Checkout navigation" className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-accent-foreground">
+        <Link href="/cart" className="min-h-10 content-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">Back to Cart</Link>
+        <Link href="/products" className="min-h-10 content-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">Continue Shopping</Link>
+      </nav>
 
       {!items.length ? (
         <div className="mt-8 rounded-2xl border border-border bg-surface p-6">

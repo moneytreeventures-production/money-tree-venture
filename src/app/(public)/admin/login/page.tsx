@@ -17,7 +17,7 @@ export default function AdminLoginPage() {
           <p className="mt-8 text-[11px] font-bold tracking-[0.18em] text-foreground-secondary">RESTRICTED ACCESS</p>
           <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-[-0.05em] text-foreground sm:text-4xl">Admin Login</h1>
           <p className="mt-4 text-sm leading-7 text-foreground-secondary sm:text-base">
-            Yeh area sirf authorized administrator ke liye hai. Google sign-in ke baad access server par verify hoga; is page par aane se permissions nahi milti.
+            This area is for the authorized administrator. Access is verified on the server after Google sign-in.
           </p>
           <div className="mt-8">
             <Suspense fallback={<div className="flex min-h-14 items-center justify-center rounded-xl border border-border bg-surface text-sm text-foreground-secondary" role="status">Login load ho raha hai...</div>}>

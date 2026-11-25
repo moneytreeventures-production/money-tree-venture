@@ -91,7 +91,7 @@ export function normalizeError(error: unknown): NormalizedError {
         return withDiagnostic({
           code: "INTERNAL_ERROR",
           statusCode: 500,
-          message: "Kuch gadbad ho gayi. Dobara try karein.",
+          message: "Something went wrong. Please try again.",
           operational: false,
         }, error);
       }

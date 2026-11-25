@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, BookOpen, ChevronLeft, ChevronRight, Layers3, LoaderCircle, PhoneCall, Search, ShoppingBag } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronLeft, ChevronRight, Layers3, PhoneCall, Search, ShoppingBag } from "lucide-react";
+import { SkeletonProductGrid } from "@/components/ui/skeleton";
+import { Feedback } from "@/components/ui/feedback";
 import { useCart } from "@/components/cart/cart-provider";
 import { formatINR } from "@/lib/format/currency";
 import { buildCatalogueApiQuery, readCatalogueQuery, updateCatalogueSearch, type CatalogueProductType } from "@/lib/catalog/catalogue-query";
@@ -34,7 +36,7 @@ interface ProductListResponse {
 }
 interface CategoryListResponse { success: boolean; data?: { items: PublicCategory[] }; error?: { message?: string } }
 
-const inputClass = "min-h-11 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
+const inputClass = "mt-field px-3 text-sm";
 const productKinds: Array<{ value: "" | ProductType; label: string }> = [
   { value: "", label: "All product types" },
   { value: "pdf", label: "Individual PDF" },
@@ -192,21 +194,21 @@ function ProductCatalogContents({ search }: { search: string }) {
   const categoryNameById = useMemo(() => new Map(categories.map((category) => [category._id, category.name])), [categories]);
 
   return (
-    <section className="mx-auto w-full max-w-[1360px] px-5 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+    <section className="mt-container py-12 sm:py-16 lg:py-20">
       <div className="flex flex-col justify-between gap-6 border-b border-border pb-8 sm:flex-row sm:items-end">
         <div className="max-w-3xl">
-          <p className="text-[11px] font-bold tracking-[0.18em] text-accent-foreground">MONEYTREEVENTURES · PRODUCTS</p>
-          <h1 className="mt-4 text-4xl font-semibold leading-[1.02] tracking-[-0.06em] text-foreground sm:text-5xl lg:text-6xl">Choose a resource for your next step.</h1>
+          <p className="mt-eyebrow">MONEYTREEVENTURES · PRODUCTS</p>
+          <h1 className="mt-4 text-4xl font-semibold leading-[1.02] tracking-[-0.05em] text-foreground [text-wrap:balance] sm:text-5xl lg:text-6xl">Choose a resource for your next step.</h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-foreground-secondary sm:text-base">Browse published PDF guides, PDF bundles, starter kits and 1:1 Call Guidance. Details and prices come from the live catalogue.</p>
         </div>
         <Link href="/cart" className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"><ShoppingBag size={17} aria-hidden="true" /> Cart ({count})</Link>
       </div>
 
-      <div className="mt-7 grid gap-4 rounded-2xl border border-border bg-surface p-4 sm:p-5">
+      <div className="mt-card mt-7 grid gap-4 p-4 sm:p-5">
         <form role="search" onSubmit={submitSearch} className="flex flex-col gap-2 sm:flex-row">
           <label htmlFor="catalogue-search" className="sr-only">Search products</label>
           <input id="catalogue-search" type="search" value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} maxLength={100} placeholder="Search product name or description" className={`${inputClass} min-w-0 flex-1`} />
-          <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-[#0f1e36] transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"><Search size={16} aria-hidden="true" /> Search</button>
+          <button type="submit" className="mt-button mt-button-primary rounded-xl px-5"><Search size={16} aria-hidden="true" /> Search</button>
         </form>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <label className="grid gap-1.5 text-xs font-semibold text-foreground-secondary">Category
@@ -232,16 +234,16 @@ function ProductCatalogContents({ search }: { search: string }) {
       </div>
 
       <p className="sr-only" role="status" aria-live="polite">{notice}</p>
-      {loading && <div className="flex min-h-56 items-center justify-center gap-3 text-sm text-foreground-secondary" role="status"><LoaderCircle size={18} className="animate-spin" aria-hidden="true" /> Loading published resources…</div>}
-      {!loading && error && <div className="mt-8 rounded-2xl border border-border bg-surface p-6 text-sm text-foreground-secondary" role="alert"><p>{error}</p><button type="button" onClick={() => setReload((value) => value + 1)} className="mt-4 min-h-10 font-semibold text-foreground underline underline-offset-4">Retry products</button></div>}
-      {!loading && !error && items.length === 0 && <div className="mt-8 rounded-2xl border border-dashed border-border bg-surface/70 px-6 py-16 text-center"><p className="text-lg font-semibold text-foreground">{urlState.query || urlState.category || urlState.productType || urlState.minPrice || urlState.maxPrice ? "No products match these filters." : "No resources are published yet."}</p><p className="mt-2 text-sm text-foreground-secondary">Try changing your search or filters.</p></div>}
+      {loading && <SkeletonProductGrid label="Loading published resources..." count={6} className="mt-8" />}
+      {!loading && error && <Feedback tone="error" className="mt-8" action={<button type="button" onClick={() => setReload((value) => value + 1)} className="min-h-11 font-semibold text-foreground underline underline-offset-4">Retry products</button>}>{error}</Feedback>}
+      {!loading && !error && items.length === 0 && <Feedback tone="empty" className="mt-8 text-center" title={urlState.query || urlState.category || urlState.productType || urlState.minPrice || urlState.maxPrice ? "No products match these filters." : "No resources are published yet."}>Try changing your search or filters.</Feedback>}
       {!loading && !error && items.length > 0 && <>
         <p className="mt-8 text-xs font-semibold text-foreground-secondary">{`${total} published ${total === 1 ? "resource" : "resources"}`}</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((product) => {
             const Icon = productIcon(product.productType);
             const productCategories = [...new Set(product.categoryIds ?? [])].map((id) => categoryNameById.get(id)).filter((name): name is string => Boolean(name));
-            return <article key={product.id} className="group flex min-h-full flex-col overflow-hidden rounded-[1.35rem] border border-border bg-background transition-all hover:-translate-y-1 hover:border-foreground/20 hover:shadow-[0_24px_60px_-38px_rgba(15,30,54,0.32)]">
+            return <article key={product.id} className="mt-card mt-card-interactive group flex min-h-full flex-col overflow-hidden bg-background motion-safe:hover:-translate-y-1">
               <ProductThumbnail product={product} />
               <div className="flex flex-1 flex-col p-5 sm:p-6">
                 <div className="flex items-center gap-2"><Icon size={15} className="text-accent-foreground" aria-hidden="true" /><span className="text-[10px] font-bold tracking-[0.13em] text-accent-foreground">{productTypeLabel(product)}</span>{product.featured && <span className="ml-auto rounded-full bg-accent/15 px-2.5 py-1 text-[9px] font-bold tracking-wide text-foreground">FEATURED</span>}</div>

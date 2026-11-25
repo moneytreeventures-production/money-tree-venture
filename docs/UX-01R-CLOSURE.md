@@ -1,0 +1,32 @@
+# UX-01R closure — 25 November 2026
+
+**UX-00: PASS** for its repository audit and anonymous baseline. **UX-01: PASS — local implementation; authenticated acceptance pending.** This is local UX closure, not production readiness, WCAG certification or UX-02 approval. The `staging` branch and pre-existing uncommitted changes were preserved.
+
+## Requirement acceptance matrix
+
+| Acceptance requirement | Evidence | Test or screenshot reference | Result | Outstanding action | Owner approval needed |
+|---|---|---|---|---|---|
+| UX-00 route, component, dependency and risk inventory | Source-based route matrix, component inventory, design direction and risk register | `UX-00-AUDIT.md`, `UX-COMPONENT-INVENTORY.md`, `UX-DESIGN-DIRECTION.md`, `UX-RISK-REGISTER.md` | PASS | Keep later route changes reflected in later milestones | No |
+| UX-00 anonymous visual baseline | True 390px and 1440px captures for home, catalogue and product detail; 390px empty cart/checkout | `docs/ux-audit/`; corrected CDP viewport values recorded in UX-00 | PASS | Signed-in and populated states remain separate acceptance work | Approved session needed |
+| UX-00 unavailable measurements classified | Core Web Vitals, signed-in visuals, screen reader and live integration were explicitly marked unverified | UX-00 audit and this matrix | PASS as audit deliverable | Measure on an approved browser/staging environment | Yes for signed-in/staging |
+| UX-01 design foundation | Semantic tokens, container, typography, cards, buttons, fields, focus, responsive header/footer/hero/catalogue/detail | `src/app/globals.css`, component sources; `docs/ux-01-screenshots/` | PASS locally | Owner visual acceptance of final treatment | Yes for final visual sign-off |
+| Product-detail prerender error | `generateMetadata` read MongoDB without a request-time boundary; its data path reaches the connection timer using `Date.now()`. Added `await connection()` after slug validation and before data access. Product content already had its own Suspense/request boundary. | `src/app/products/[slug]/page.tsx`; UX Chrome detail test 2/2; refreshed `docs/ux-01-screenshots/detail-390-light.png`; build 55/55 | PASS locally | Verify again on staging after deployment | No for local fix |
+| Anonymous Chrome `Page.enable` timeout | Isolated CDP probe timed out in the installed headless shell (5.5s); full Chrome answered in 574ms. Runner now prefers full Chrome/Edge, uses an isolated profile and locally compatible startup flags. | `tests/e2e/local-journey.test.mjs`; actual journey 9 pass, 1 media skip, 0 fail | PASS for runner | Owner browser must check public R2 image reachability | No |
+| Public viewport and theme coverage | No horizontal overflow on `/`, `/products`, `/cart`, `/checkout` at 320, 390, 768, 1024, 1440 and 1920px. Public home/catalogue/detail screenshots captured at 390/1440 in light/dark. | UX Chrome 2/2; `docs/ux-01-screenshots/` | PASS for sampled anonymous routes | Populated and signed-in states require review | Approved session needed |
+| Public keyboard, touch and contrast | Menu opens, Escape closes and restores visible focus; header controls measure at least 44px; sampled heading and primary CTA contrast exceed 4.5:1 in light/dark. | UX Chrome 2/2; 390px mobile-menu capture | PASS for sampled controls | Full text/border/status-color audit and screen reader still required | No for local test |
+| Motion and hydration | `Reveal` now starts with stable server/client markup, then applies reduced-motion behavior after mount. Reduced-motion content becomes visible; browser saw no public-route hydration warnings. | `src/components/ui/reveal.tsx`, `src/app/globals.css`; UX Chrome 2/2 | PASS for sampled routes | No-JS and assistive-technology review; no comprehensive CLS trace | No |
+| Existing UI behavior regression | Homepage/product-media/admin navigation/admin-product fixtures passed; anonymous cart/catalogue journey reached the app. | Browser fixtures 4/4; journey 9 pass, 1 skip | PASS locally with media limitation | Public R2 poster remains inaccessible in this agent browser | No |
+| Authenticated owner/customer visual acceptance | No approved reusable authenticated local session or fixture was available. No session was forged and no Google OAuth was automated. | Source inventory only; no signed-in screenshot or browser result | PENDING | Owner signs in manually in an approved local/staging browser; inspect `/admin`, `/admin/products`, `/account`, `/account/library`, `/account/orders` at mobile/desktop in light/dark, keyboard through nav/dialogs, verify loading/empty/error and sign-out; record redacted screenshots and console results | Yes, approved session |
+| Performance, full accessibility and deployment | No LCP/INP/CLS measurement, screen-reader certification, production runtime or deployed integration was performed. Build generated 55/55 pages. | Build output; UX browser checks above | NOT_VERIFIED beyond local scope | Run real-browser metrics, screen-reader/manual review and staging checks separately | Yes for staging |
+
+## Verification performed
+
+- UX Chrome CDP: **2/2 pass**, including a repeated screenshot capture run. The refreshed detail capture has no red issue overlay; the ordinary Next.js development badge remains.
+- Anonymous local journey: **9 pass, 1 skip, 0 fail**. The skipped check is external public media blocked by `net::ERR_NETWORK_ACCESS_DENIED` in this agent browser; the other interactions actually ran.
+- Local UI fixtures: **4/4 pass**. Application TypeScript and test TypeScript: **pass**. Focused ESLint and JavaScript syntax checks: **pass**. Next production build: **55/55 pages generated**. `git diff --check`: **pass**; Git emitted line-ending conversion notices only. A direct check of the new UX documentation found no trailing whitespace.
+
+## Scope and next action
+
+UX-01R changed only the product-detail request boundary, shared Reveal hydration/reduced-motion behavior, small touch-target sizing, anonymous E2E browser startup/media classification, the focused UX browser test and closure documentation. It did not change authentication, checkout, prices, orders, payments, entitlements or database records.
+
+The owner should perform the authenticated mobile/desktop review described above and confirm the public product image from a browser with access to the configured media host. Keep screen-reader, no-JS, layout-shift and real Core Web Vitals measurements open. UX-02 requires a separate instruction.

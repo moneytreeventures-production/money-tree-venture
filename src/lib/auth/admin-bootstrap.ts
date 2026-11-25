@@ -24,7 +24,7 @@ export function createAdminBootstrap(store: AdminBootstrapStore) {
   return async function bootstrapAdmin(input: BootstrapAdminInput): Promise<BootstrapAdminResult> {
     const authUserId = input.authUserId.trim();
     if (!input.confirmed || !authUserId || authUserId.length > 128 || authUserId !== input.authUserId) {
-      throw new ValidationError([{ field: "confirmation", message: "Admin bootstrap ke liye exact user ID aur explicit confirmation zaroori hai." }]);
+      throw new ValidationError([{ field: "confirmation", message: "Admin setup requires the exact user ID and explicit confirmation." }]);
     }
 
     const identity = await store.getAuthIdentity(authUserId);

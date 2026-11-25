@@ -1,0 +1,11 @@
+# Transactional outbox delivery correction
+
+The owner confirmed one direct admin Resend test reached the inbox. The three existing purchase-confirmation events remain pending with zero attempts. The local `next dev` process does not run Netlify's scheduled Function, so this observation alone does not establish a Resend or template defect. The earlier deployed worker 401 still requires a deployed Function log and environment-scope check.
+
+The outbox now uses each order's immutable `gatewayEnvironment`. Sandbox orders send only to an exact address in `EMAIL_TEST_RECIPIENTS`, including when Next.js runs with `NODE_ENV=production`. Production orders retain their recorded customer recipient after the existing verified-payment check. The worker never substitutes another address. Missing or unrecognized payment environment fails closed.
+
+The previous worker marked events `sent` when the handler returned early without contacting Resend. Intentionally ineligible, legacy purchase-level, and disallowed-recipient events now enter the existing `dead_letter` state with the safe code `EMAIL_SUPPRESSED`. The dashboard reports that count separately. Missing order, user, booking or refund references remain failures. Provider acceptance still requires a Resend message ID, and retries retain the event's idempotency key. No schema or index was changed.
+
+For local verification, inspect the owner dashboard and check the configured database, worker secret, approved recipients and rate-index health. A direct POST to `/api/internal/outbox` requires the actual bearer secret and **processes** queued events; do not use it for a dry run against the existing database. Review each pending event's paid state, stored gateway environment, recipient allowlist and prior Resend history before authorizing any processing. Netlify's `process-outbox` schedule runs every 15 minutes after deployment; confirm both the scheduled Function and the Next.js API receive the same `OUTBOX_WORKER_SECRET` and approved HTTPS `APP_URL` in the deployed context. A worker 401 must be resolved from sanitized logs before replay.
+
+No existing outbox record was processed, no email was sent, and no database mutation was performed in this correction.

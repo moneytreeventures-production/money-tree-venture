@@ -19,6 +19,9 @@ import {
   ProductModel,
   PurchaseModel,
   RefundModel,
+  ReviewModel,
+  SupportRequestModel,
+  SupportRateModel,
   UserModel,
   WebhookEventModel,
 } from "../src/lib/db/models";
@@ -29,6 +32,61 @@ const LEGACY_ORDER_INDEX_FIELD = "orderNumber";
 interface IndexableModel {
   collection: { collectionName: string };
   createIndexes(): Promise<unknown>;
+  schema?: { indexes(): Array<[Record<string, unknown>, Record<string, unknown>]> };
+}
+export const managedModels: IndexableModel[] = [
+  UserModel, CategoryModel, ProductModel, ProductAssetModel, ProductMediaModel,
+  OrderModel, PaymentModel, PurchaseModel, PersonalizedPdfModel, DownloadLogModel,
+  DownloadRateLimitModel, CouponModel, CouponRedemptionModel, BookingModel,
+  WebhookEventModel, OutboxEventModel, AuditLogModel, CheckoutClaimModel,
+  RefundModel, ReviewModel, SupportRequestModel, SupportRateModel,
+];
+export const authCollectionNames = ["authUsers", "authSessions", "authAccounts", "authVerifications"] as const;
+
+export function emailTestRateIndexDefinition() {
+  const declaration = SupportRateModel.schema.indexes().find(([key, options]) =>
+    JSON.stringify(key) === JSON.stringify({ identityHash: 1, windowStart: 1 }) && options.unique === true);
+  if (!declaration) throw new IndexInitializationUsageError("Required email test rate index is absent from the model schema.");
+  const [key, options] = declaration;
+  return { name: options.name ?? "identityHash_1_windowStart_1", key: key as Record<string, 1 | -1>, unique: true as const };
+}
+
+type IndexDefinition = { name?: string; key: Record<string, unknown>; unique?: boolean; sparse?: boolean; partialFilterExpression?: unknown; expireAfterSeconds?: number; collation?: unknown };
+function comparableIndex(index: IndexDefinition) {
+  return JSON.stringify({ key: index.key, unique: index.unique === true, sparse: index.sparse === true,
+    partialFilterExpression: index.partialFilterExpression ?? null,
+    expireAfterSeconds: index.expireAfterSeconds ?? null, collation: index.collation ?? null });
+}
+function resolvedIndexName(index: IndexDefinition): string {
+  return index.name ?? Object.entries(index.key).map(([field, direction]) => `${field}_${direction}`).join("_");
+}
+export function compareManagedIndexes(expected: IndexDefinition[], actual: IndexDefinition[]) {
+  const missing: string[] = [];
+  const incompatible: string[] = [];
+  for (const index of expected) {
+    const name = resolvedIndexName(index);
+    const found = actual.find((candidate) => candidate.name === name);
+    if (!found) missing.push(name);
+    else if (comparableIndex(index) !== comparableIndex(found)) incompatible.push(name);
+  }
+  return { missing, incompatible };
+}
+
+export async function inspectManagedDatabase() {
+  const db = mongoose.connection.db;
+  if (!db) throw new IndexInitializationUsageError("MongoDB is not connected.");
+  const existing = new Set((await db.listCollections({}, { nameOnly: true }).toArray()).map((entry) => entry.name));
+  const collections = [];
+  for (const model of managedModels) {
+    const name = model.collection.collectionName;
+    const expected = (model.schema?.indexes() ?? []).map(([key, options]) => ({ key, ...options, name: options.name as string | undefined }));
+    const actual = existing.has(name) ? await db.collection(name).indexes() : [];
+    collections.push({ name, exists: existing.has(name), expected, actual: actual.map(({ name: indexName, key, unique, sparse, partialFilterExpression, expireAfterSeconds, collation }) => ({ name: indexName, key, unique, sparse, partialFilterExpression, expireAfterSeconds, collation })), ...compareManagedIndexes(expected, actual) });
+  }
+  for (const name of authCollectionNames) {
+    collections.push({ name, exists: existing.has(name), expected: [], actual: existing.has(name) ? (await db.collection(name).indexes()).map(({ name: indexName, key, unique, sparse, partialFilterExpression, expireAfterSeconds, collation }) => ({ name: indexName, key, unique, sparse, partialFilterExpression, expireAfterSeconds, collation })) : [], missing: [], incompatible: [] });
+  }
+  return { database: mongoose.connection.name, ready: collections.every((entry) => entry.exists && !entry.missing.length && !entry.incompatible.length), collections };
 }
 
 export class IndexInitializationUsageError extends Error {}
@@ -188,6 +246,10 @@ export async function migrateRepurchaseIndexes(): Promise<void> {
     throw new IndexInitializationUsageError("Required unique order-line purchase index verification failed. No index was removed.");
   }
   if (!history) await collection.createIndex({ userId: 1, productId: 1, grantedAt: -1 }, { name: PURCHASE_HISTORY_INDEX });
+  const replacementState = inspectPurchaseIndexes(await collection.indexes());
+  if (replacementState.missing.length || replacementState.incompatible.length) {
+    throw new IndexInitializationUsageError("Replacement purchase indexes failed verification; no legacy index was removed.");
+  }
   const checkoutIndexes = await db.collection("checkoutClaims").indexes();
   const claimsSafe = checkoutIndexes.some((index) => index.name === "checkout_claim_one_active_product" && index.unique === true && JSON.stringify(index.key) === JSON.stringify({ userId: 1, productId: 1 }) && JSON.stringify(index.partialFilterExpression) === JSON.stringify({ status: "active" }));
   if (!claimsSafe || !PurchaseModel.schema.path("orderLineId")) throw new IndexInitializationUsageError("Checkout claim protection or modern purchase schema could not be verified; legacy indexes were preserved.");
@@ -268,12 +330,72 @@ async function removeLegacyRefundIndex(dropRequested: boolean): Promise<void> {
 }
 
 export async function runIndexInitialization(args: readonly string[]): Promise<void> {
-  const input = parseIndexInitializationArgs(args);
+  const rateMode = args[0] === "--rate-preflight" || args[0] === "--rate-init" ? args[0] : null;
+  const mode = args[0] === "--inspect" || args[0] === "--verify" || args[0] === "--init" ? args[0] : null;
+  const input = parseIndexInitializationArgs(mode || rateMode ? args.slice(1, 3) : args);
+  if (mode && (args.length !== (mode === "--init" ? 4 : 3) || (mode === "--init" && args[3] !== "--confirm-non-production"))) throw new IndexInitializationUsageError("Database initialization requires --confirm-non-production; inspection and verification are read-only.");
+  if (rateMode && (args.length !== (rateMode === "--rate-init" ? args[2] === "moneytreeventures" ? 5 : 4 : 3) || (rateMode === "--rate-init" && args[3] !== "--confirm-non-production") || (rateMode === "--rate-init" && args[2] === "moneytreeventures" && args[4] !== "--confirm-existing-development"))) throw new IndexInitializationUsageError("Rate index setup requires exact database confirmation and explicit non-production approval.");
   loadEnvConfig(process.cwd());
+  // Refuse a misconfigured target before opening any database connection.
+  assertConfirmedDatabaseName(process.env.MONGODB_DB_NAME ?? "", input.databaseName);
+  const configuredUri = process.env.MONGODB_URI ?? "";
+  let uriDatabase = "";
+  try { uriDatabase = decodeURIComponent(new URL(configuredUri).pathname.slice(1)); }
+  catch { throw new IndexInitializationUsageError("MongoDB URI is invalid. No database connection was attempted."); }
+  if (uriDatabase && uriDatabase !== input.databaseName) throw new IndexInitializationUsageError("MongoDB URI database differs from the confirmed target. No connection was attempted.");
+  if (mode === "--init" && input.databaseName === "moneytreeventures") throw new IndexInitializationUsageError("Protected database initialization requires a separate approved workflow.");
+  if (rateMode === "--rate-init" && input.databaseName === "moneytreeventures" && (process.env.EMAIL_TEST_DATABASE_ROLE !== "local-development-only" || process.env.EMAIL_TEST_DATABASE_NAME !== input.databaseName || process.env.NETLIFY === "true")) throw new IndexInitializationUsageError("Existing development database index setup requires a local-only role attestation; no index was changed.");
   try {
     await connectToDatabase();
     const actualDatabaseName = mongoose.connection.name;
     assertConfirmedDatabaseName(actualDatabaseName, input.databaseName);
+
+    if (rateMode) {
+      const db = mongoose.connection.db;
+      if (!db) throw new IndexInitializationUsageError("MongoDB is not connected.");
+      const name = SupportRateModel.collection.collectionName;
+      const exists = await db.listCollections({ name }, { nameOnly: true }).hasNext();
+      const collection = db.collection(name);
+      const indexes = exists ? await collection.indexes() : [];
+      const expected = emailTestRateIndexDefinition();
+      const state = compareManagedIndexes([expected], indexes);
+      const duplicates = exists && state.missing.length ? await collection.aggregate([{ $group: { _id: { identityHash: "$identityHash", windowStart: "$windowStart" }, count: { $sum: 1 } } }, { $match: { count: { $gt: 1 } } }, { $count: "groups" }]).toArray() : [];
+      const duplicateGroupCount = duplicates[0]?.groups ?? 0;
+      if (rateMode === "--rate-preflight") { console.info(JSON.stringify({ database: actualDatabaseName, collection: name, exists, ...state, duplicateGroupCount })); return; }
+      if (state.incompatible.length || duplicateGroupCount) throw new IndexInitializationUsageError("Rate index is incompatible or duplicate data exists; no index was changed.");
+      if (state.missing.length) await collection.createIndex(expected.key, { name: expected.name, unique: true });
+      const verified = compareManagedIndexes([expected], await collection.indexes());
+      if (verified.missing.length || verified.incompatible.length) throw new IndexInitializationUsageError("Rate index verification failed.");
+      console.info("Email test rate index verified; no documents changed.");
+      return;
+    }
+
+    if (mode === "--inspect" || mode === "--verify") {
+      const report = await inspectManagedDatabase();
+      console.info(JSON.stringify(report));
+      if (mode === "--verify" && !report.ready) throw new IndexInitializationUsageError("Required database indexes are missing or incompatible.");
+      return;
+    }
+    if (mode === "--init") {
+      const db = mongoose.connection.db;
+      if (!db) throw new IndexInitializationUsageError("MongoDB is not connected.");
+      const names = (await db.listCollections({}, { nameOnly: true }).toArray()).map((entry) => entry.name);
+      const allowed = new Set([...managedModels.map((model) => model.collection.collectionName), ...authCollectionNames]);
+      if (names.some((name) => !allowed.has(name)) || (await Promise.all(names.map((name) => db.collection(name).estimatedDocumentCount()))).some((count) => count > 0)) {
+        throw new IndexInitializationUsageError("Initialization requires an empty database or an unfinished empty bootstrap; use a guarded migration for populated databases.");
+      }
+      const prior = await inspectManagedDatabase();
+      if (prior.collections.some((entry) => entry.incompatible.length)) throw new IndexInitializationUsageError("Existing index definitions are incompatible; initialization made no changes.");
+      for (const model of managedModels) {
+        if (!names.includes(model.collection.collectionName)) await db.createCollection(model.collection.collectionName);
+        await createModelIndexes(model);
+      }
+      for (const name of authCollectionNames) if (!names.includes(name)) await db.createCollection(name);
+      const report = await inspectManagedDatabase();
+      if (!report.ready) throw new IndexInitializationUsageError("Initialization finished without all required indexes; inspect before retrying.");
+      console.info(`Database ${actualDatabaseName} initialized and verified.`);
+      return;
+    }
 
     if (input.claimsOnly) {
       await createModelIndexes(CheckoutClaimModel);
@@ -295,13 +417,7 @@ export async function runIndexInitialization(args: readonly string[]): Promise<v
 
     await removeLegacyOrderNumberIndex(false);
     await removeLegacyRefundIndex(input.dropLegacyRefundIndex);
-    const models: IndexableModel[] = [
-      UserModel, CategoryModel, ProductModel, ProductAssetModel, ProductMediaModel, OrderModel, PaymentModel,
-      PurchaseModel, PersonalizedPdfModel, DownloadLogModel, DownloadRateLimitModel,
-      CouponModel, CouponRedemptionModel, BookingModel, WebhookEventModel, OutboxEventModel,
-      AuditLogModel, CheckoutClaimModel, RefundModel,
-    ];
-    for (const model of models) {
+    for (const model of managedModels) {
       await createModelIndexes(model);
       console.info(`Indexes verified for ${model.collection.collectionName}.`);
     }

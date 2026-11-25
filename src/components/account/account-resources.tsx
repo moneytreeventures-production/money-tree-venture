@@ -95,7 +95,7 @@ export function AccountResources({ purchases, bookings, showLibrary = true, show
                 </div>
                 {purchase.files.length > 0 && <ul className="flex flex-wrap gap-2 sm:justify-end">{purchase.files.map((file) => (
                   <li key={file.id}>
-                    <button type="button" disabled={downloading !== null} onClick={() => void download(purchase.id, file.id)} className="inline-flex min-h-10 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50">
+                    <button type="button" disabled={downloading !== null} onClick={() => void download(purchase.id, file.id)} className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50">
                       {pdfDownloadButtonLabel(file.productName ?? "PDF", file.status, downloading === `${purchase.id}:${file.id}`)}
                     </button>
                   </li>
@@ -119,7 +119,7 @@ export function AccountResources({ purchases, bookings, showLibrary = true, show
                 <label className="grid gap-2 text-sm font-medium text-foreground">Choose your preferred call time<input name="requestedStartAt" type="datetime-local" required className="min-h-11 rounded-lg border border-border bg-background px-3" /></label>
                 <label className="grid gap-2 text-sm font-medium text-foreground">Time zone<input value={Intl.DateTimeFormat().resolvedOptions().timeZone} readOnly className="min-h-11 rounded-lg border border-border bg-background px-3 text-foreground-secondary" /></label>
                 <label className="grid gap-2 text-sm font-medium text-foreground sm:col-span-2">Note (optional)<textarea name="customerNotes" defaultValue={booking.customerNotes ?? ""} maxLength={2000} rows={2} className="rounded-lg border border-border bg-background px-3 py-2" /></label>
-                <div><button type="submit" disabled={savingBooking === booking.id} className="min-h-10 rounded-full border border-border px-4 text-sm font-semibold text-foreground hover:border-primary disabled:opacity-50">{savingBooking === booking.id ? "Sending your time…" : booking.requestedSlots.length ? "Send a new preferred time" : "Send preferred time"}</button></div>
+                <div><button type="submit" disabled={savingBooking === booking.id} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground hover:border-primary disabled:opacity-50">{savingBooking === booking.id ? "Sending your time…" : booking.requestedSlots.length ? "Send a new preferred time" : "Send preferred time"}</button></div>
               </form>}
             </li>
           ))}</ul>

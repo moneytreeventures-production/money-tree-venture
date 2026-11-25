@@ -59,7 +59,7 @@ export function PaymentResult({ initialOrder }: { initialOrder: ResultOrder }) {
           {paid ? "Payment Successful!" : terminalFailed ? "Payment Unsuccessful" : "Verifying Your Payment"}
         </h1>
         <p className="mt-4 text-base leading-7 text-foreground-secondary">
-          {paid ? "Your payment has been confirmed." : terminalFailed ? "This payment did not complete and the order has closed. You can review the order or start a fresh checkout at current prices." : "We are confirming your payment securely with Cashfree. Please wait before starting another checkout."}
+          {paid ? "Your payment has been confirmed." : terminalFailed ? "This payment did not complete and the order has closed. You can review the order or start a fresh checkout at current prices." : "We are confirming your payment securely with Cashfree. Verification can continue if you leave this page. Please wait before starting another checkout."}
         </p>
         {!paid && !terminalFailed && <p role="status" className="sr-only">Payment verification in progress</p>}
         {message && <p role="status" className="mt-3 text-sm text-foreground-secondary">{message}</p>}
@@ -79,11 +79,13 @@ export function PaymentResult({ initialOrder }: { initialOrder: ResultOrder }) {
       {paid && <p className="mx-auto mt-5 max-w-xl text-center text-sm leading-6 text-foreground-secondary">
         {hasDownloads ? "Your verified PDF access is available in My Library. Personalized downloads are prepared securely when requested." : "Your consultation booking is available from your account."}
       </p>}
-      <nav aria-label="Payment result actions" className="mx-auto mt-7 flex max-w-xl flex-col justify-center gap-3 sm:flex-row">
+      <nav aria-label="Payment result actions" className="mx-auto mt-7 flex max-w-xl flex-col flex-wrap justify-center gap-3 sm:flex-row">
         {paid && hasDownloads && <Link href="/account/library" className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 text-sm font-semibold text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Go to My Library</Link>}
         {paid && hasConsultation && <Link href="/account/bookings" className="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 text-sm font-semibold text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">View Consultation Booking</Link>}
         {terminalFailed && <RetryExpiredOrder orderId={order.id} />}
         <Link href={`/checkout/${encodeURIComponent(order.id)}`} className="inline-flex min-h-12 items-center justify-center rounded-full border border-border px-6 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">View Order</Link>
+        <Link href="/account/orders" className="inline-flex min-h-12 items-center justify-center rounded-full border border-border px-6 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">View My Orders</Link>
+        <Link href="/products" className="inline-flex min-h-12 items-center justify-center rounded-full border border-border px-6 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Continue Shopping</Link>
       </nav>
     </section>
   </main>;

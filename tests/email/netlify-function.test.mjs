@@ -107,3 +107,26 @@ test("scheduled Netlify handler calls only the protected same-site outbox endpoi
     if (originalSecret === undefined) delete process.env.OUTBOX_WORKER_SECRET; else process.env.OUTBOX_WORKER_SECRET = originalSecret;
   }
 });
+
+test("worker refuses redirects and classifies application authorization failures without logging secrets", async () => {
+  const previous = { url: process.env.APP_URL, secret: process.env.OUTBOX_WORKER_SECRET, fetch: globalThis.fetch };
+  process.env.APP_URL = "https://staging.example.invalid";
+  process.env.OUTBOX_WORKER_SECRET = "private-test-secret";
+  try {
+    for (const [status, body, category] of [[302, null, "redirect_blocked"], [401, { error: { code: "UNAUTHORIZED", message: "Worker authorization required." } }, "application_worker_auth_rejected"], [401, null, "unclassified_response"]]) {
+      globalThis.fetch = async (_url, init) => {
+        assert.equal(init.redirect, "manual");
+        return body ? Response.json(body, { status }) : new Response(null, { status });
+      };
+      await assert.rejects(processOutbox, error => {
+        assert.ok(error.message.includes(category));
+        assert.ok(!error.message.includes("private-test-secret"));
+        return true;
+      });
+    }
+  } finally {
+    globalThis.fetch = previous.fetch;
+    if (previous.url === undefined) delete process.env.APP_URL; else process.env.APP_URL = previous.url;
+    if (previous.secret === undefined) delete process.env.OUTBOX_WORKER_SECRET; else process.env.OUTBOX_WORKER_SECRET = previous.secret;
+  }
+});

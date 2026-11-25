@@ -22,3 +22,12 @@ test("caps percentage coupons and rejects invalid tax configuration", () => {
   assert.equal(line?.discountPaise, 2_000);
   assert.throws(() => priceOrder([{ lineSubtotalPaise: 100, discountEligible: true }], undefined, -1));
 });
+
+test("a new ₹299 product remains ₹299 with a zero-tax snapshot", () => {
+  const [line] = priceOrder([{ lineSubtotalPaise: 29_900, discountEligible: true }], undefined, 0);
+  assert.equal(line?.lineTotalPaise, 29_900);
+  assert.equal(line?.taxPaise, 0);
+  const [discounted] = priceOrder([{ lineSubtotalPaise: 29_900, discountEligible: true }], { type: "fixed", value: 5_000 }, 0);
+  assert.equal(discounted?.lineTotalPaise, 24_900);
+  assert.equal(discounted?.taxPaise, 0);
+});

@@ -1,5 +1,49 @@
 # Test Register
 
+## UX-02A authenticated UI acceptance — 25 November 2026
+
+| Check | Result | Scope / limit |
+|---|---|---|
+| Owner-managed local server `/login` | PASS HTTP 200 | Reused the running server; no restart. Configuration key presence and expected local origins/database name checked without printing values. |
+| Anonymous protected APIs | PASS HTTP 401 each | `/api/admin/products` and `/api/purchases`; streamed page HTTP 200 alone is not treated as authorization evidence. |
+| `npm.cmd run test:admin` | PASS 19/19 | Mocked owner-only policy and route authorization, not live Google sign-in. |
+| `npm.cmd run test:browser` | PASS 8/8 | Component/HTML browser fixtures, not authenticated page rendering. |
+| UX touch target + overlay fixtures | PASS 6/6 | Source-backed 44px contract and isolated Chromium overlay; no owner editor session. |
+| Anonymous UX Chrome | PASS 2/2 | Public route viewport/theme/hydration and product detail; no protected route. |
+| Application/test TypeScript and focused ESLint | PASS | Local static checks after touch-target correction. |
+| Authenticated harness startup | PARTIAL | Owner authorized manual sign-in. The harness passed anonymous API checks and reached the sign-in prompt, but the launched Chrome window was not visible on the owner's desktop. The run was canceled and its temporary profile cleaned. |
+| Owner/customer signed-in browser, protected screenshots, library/download presentation | NOT_VERIFIED | No Google sign-in occurred in the agent-launched browser. Run the gated harness from the owner's interactive PowerShell desktop for both roles. |
+| UX-02A production build | NOT_RUN | Owner-managed dev server was not stopped; standard build would share `.next`. |
+
+
+## UX-02 interaction foundation — 25 November 2026
+
+| Check | Result | Scope |
+|---|---|---|
+| UX primitives `node --test tests/ux/interaction-foundation.test.mjs` | PASS 5/5 | Skeleton announcements and media aspect, feedback semantics, visible server HTML, overlay semantics and isolated real-Chromium focus/Escape/scroll-lock behavior. |
+| Combined UX browser checks, sequential | PASS 6, SKIP 1, FAIL 0 on final run | Existing public viewport/theme/hydration checks plus 320/390/1440px skeleton sizing, light/dark color and no overflow. Product-detail subcheck skipped because the local published-product API was unavailable during MongoDB DNS SRV `ETIMEOUT`. An earlier run with the API available passed 7/7 before final overlay correction. Two 390px skeleton screenshots saved. |
+| `npm.cmd run test:browser` | PASS 8/8 | Existing browser component fixtures including admin and checkout interactions. |
+| Anonymous local journey | PASS 9, SKIP 1, FAIL 0 | Media check blocked by browser network access to public R2 host; no payment/order creation. |
+| Application TypeScript; test TypeScript; focused ESLint | PASS | Local static validation; last code adjustment received focused TypeScript/primitive retest. |
+| `npm.cmd run build` | PASS | Next 16.4.6 generated 55/55 pages after the final overlay correction. |
+| Final syntax, lint, whitespace | PASS | JavaScript syntax checks, focused ESLint and `git diff --check` passed after the code corrections. |
+| Authenticated editor/account/browser accessibility; provider-dependent behavior | NOT_VERIFIED | No approved authenticated browser fixture/session was used; isolated overlay fixture does not prove owner route behavior. |
+
+
+## UX-01R closure — 25 November 2026
+
+| Check | Result | Scope and limitation |
+|---|---|---|
+| UX Chrome CDP `node --test tests/ux/design-foundation.browser.test.mjs` | PASS 2/2 | True 320/390/768/1024/1440/1920px on `/`, `/products`, `/cart`, `/checkout`; product metadata title and no observed `Date.now()` warning; 390px touch targets, contrast, menu Escape/focus, theme, reduced motion and public-route hydration console. Repeated with screenshot capture, also 2/2. |
+| Anonymous journey `node --test tests/e2e/local-journey.test.mjs` | PASS 9, SKIP 1, FAIL 0 | Full Chrome reached the app after the CDP runner fix. Public R2 product poster check skipped because the browser reported `net::ERR_NETWORK_ACCESS_DENIED`; image loading remains unverified here. No authentication, order or payment was created. |
+| UI browser fixtures `node --test tests/browser/homepage.test.mjs tests/browser/product-media.browser.test.mjs tests/browser/admin-navigation.browser.test.mjs tests/browser/admin-products.browser.test.mjs` | PASS 4/4 | HTML/component fixtures, including admin UI states; not a signed-in owner session. |
+| Application and test TypeScript | PASS | `npx.cmd tsc --noEmit -p tsconfig.json` and `npx.cmd tsc --noEmit -p tsconfig.env-test.json`. |
+| Focused ESLint | PASS | Product detail, Reveal, shared header/footer/theme, UX and anonymous E2E test paths. |
+| Production build `npm.cmd run build` | PASS | Next 16.4.6 compiled and generated 55/55 pages; no deployed runtime claim. |
+| JavaScript syntax and diff whitespace | PASS | `node --check` on both browser runners and `git diff --check` passed; Git printed line-ending notices only. New UX docs received a separate trailing-whitespace check. |
+| Authenticated owner/customer UI, screen reader, no-JS, Core Web Vitals, CLS trace | NOT_VERIFIED | No approved signed-in browser session/fixture or measurement run in this task. See `docs/UX-01R-CLOSURE.md`. |
+
+
 Audit checkpoint: 2026-11-20. No production data or live provider was used. Results below are from the current workspace or directly observed local development server. Do not interpret local mocks as sandbox integration.
 
 | Test area | Exact command / procedure | Environment | Result | Evidence / reason |
@@ -504,3 +548,29 @@ Phase 21 final QA checkpoint (24 November 2026): focused payments 65/65, checkou
 Phase 22A staging preparation (24 November 2026): READ-ONLY source and provider-documentation review completed. R2 code uses distinct private PDF, private media-staging and public product-media buckets; private PDF download returns authenticated bytes, not a public object URL. Local environment classification only: all three bucket names present and distinct; app/auth/Cashfree return URLs localhost HTTP; public media URL HTTPS r2.dev; Cashfree sandbox. Cloudflare dashboard permissions/custom domains NOT_VERIFIED. Netlify toml has two 15-minute schedules; automatic adapter/build/runtime and published schedule NOT_VERIFIED. Prior 53/53 build retained as historical evidence; no new build/runtime test due missing approved HTTPS staging host and media domain. Environment validator tests 17/17 PASS; application/test TypeScript, focused ESLint and diff check PASS. No provider request, email, production-like runtime or deployment. Phase 22A guide created. Staging configuration blocked; real payment fulfillment, R2 PDF, webhook, email, schedule and concurrency remain NOT_VERIFIED.
 
 Phase 22A focused outbox tests 9/9 PASS and Netlify scheduled-worker tests 5/5 PASS without sending email. These are local tests, not deployed schedule or delivery evidence.
+
+25 November 2026: staging blocker diagnostics and guarded migration preparation recorded in docs/STAGING-BLOCKERS-2026-11-25.md. Worker 6/6, index/outbox 20/20, checkout/purchase 35/35 PASS; application/test TypeScript, CLI compilation and focused ESLint PASS. Staging metadata preflight NOT_VERIFIED due DNS SRV ETIMEOUT before connection. Live worker authorization/delivery, migration and real concurrency not tested.
+
+## Database bootstrap checkpoint (2026-11-25)
+Read-only inventory and verification plus guarded empty nonproduction initialization added. Index comparison tests passed 12/12; application/test TypeScript, admin CLI compilation, focused ESLint and git diff --check passed. No live MongoDB initialization was executed. Versioned history, migration lease, Better Auth index assessment and disposable database integration remain NOT_VERIFIED; see docs/DATABASE-BOOTSTRAP.md.
+
+## Staging email testing checkpoint (2026-11-25)
+Owner-only email test page and API added, disabled by default. Focused policy/outbox tests 13/13, admin authorization 11/11, worker tests 6/6 PASS. Application/test TypeScript and focused ESLint PASS. No live email, Resend acceptance/delivery, deployed worker authorization, or staging quota-index check was performed. See docs/STAGING-EMAIL-TESTING.md.
+
+## Customer UI copy pass (2026-11-25)
+FAQ, About, Contact, product-price guidance and decorative homepage card copy updated. Application/test TypeScript, focused ESLint, 8/8 existing browser component tests, production build (55/55 pages) and git diff --check passed. No authenticated/mobile visual browser journey was run; legal/billing draft status remains pending owner review. See docs/CUSTOMER-UI-POLISH-REPORT.md.
+
+## Checkout tax and local email-test correction (2026-11-25)
+New orders store a zero-tax compatibility snapshot and do not require TAX_RATE_BPS; historical snapshots retain their validation. Local email testing now distinguishes authorization and service failures and requires an explicit nonproduction database match. Focused compiled tests 67/67; legal/Netlify JS tests 12/12; application/test TypeScript, admin CLI compilation, focused ESLint, git diff --check and production build (55/55 pages) passed. No live payment/email, staging rate-index inspection, Netlify worker verification or legal approval was performed. See docs/CHECKOUT-LEGAL-EMAIL-CORRECTION.md.
+
+## Existing local database email-test guard (2026-11-25)
+Owner confirmed moneytreeventures is the existing local development database. Source now allows owner-only read-only health diagnostics on that database and controlled test sends only with matching local APP_URL/BETTER_AUTH_URL, EMAIL_TEST_DATABASE_NAME, EMAIL_TEST_DATABASE_ROLE=local-development-only, recipient allowlist, exact unique rate index and audit writes. Protected-database rate-index preflight is read-only; guarded creation is prepared but was not run. No email sent. The read-only Atlas preflight could not complete: MongoDB reported ETIMEOUT in DNS SRV resolution after 45,383 ms, before index inspection. Index readiness remains NOT_VERIFIED; no database mutation occurred.
+
+## Local-first repair verification (2026-11-25)
+
+The app and test TypeScript checks and admin CLI compilation passed. Focused ESLint and `git diff --check` passed for changed email, admin, checkout and error files. The final `npm test` run passed 381/385 compiled tests, with four pre-existing integration skips, and the separate scheduled-worker suite passed 6/6. Focused email/index/outbox tests passed 27/27 before the later copy/navigation edits; the full repository test run covers those edits. The final production-mode Next.js build passed and generated 55/55 pages. No real email, Cashfree payment, index creation, MongoDB write, or deployment was performed. Actual Atlas rate-index state and owner-authenticated send remain NOT_VERIFIED.
+The browser component suite passed 8/8 after updating its English admin empty-state assertion. This is local component automation, not an authenticated owner browser journey or real provider integration.
+
+## UX-01 design foundation — 25 November 2026
+
+Refined Editorial Commerce tokens and representative public UI changes were implemented without changing business logic. Focused Chrome CDP design test **1/1 PASS**: `/products` at true 320/390/768/1440px had no horizontal overflow; mobile menu open/Escape/focus restoration, dark primary-button color and reduced motion passed. Homepage and product-media browser component tests **2/2 PASS**. Application and test TypeScript, focused ESLint, JS syntax and `git diff --check` passed. `npm.cmd run build` compiled and generated **55/55 pages**. The existing anonymous E2E runner **0/1** timed out at CDP `Page.enable` before navigation; no application assertion ran. Public light/dark 390/1440 screenshots were captured. Product detail generated a real Next.js dev prerender `Date.now()` console warning; root cause and authenticated behavior remain NOT_VERIFIED. No provider send, payment, database mutation, deployment or authenticated browser check occurred. See `docs/UX-01-DESIGN-SYSTEM.md`.

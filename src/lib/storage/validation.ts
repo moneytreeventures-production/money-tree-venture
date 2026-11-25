@@ -74,7 +74,7 @@ export async function assertReadablePdfDocument(body: Uint8Array): Promise<void>
   try {
     await PDFDocument.load(body, { updateMetadata: false });
   } catch {
-    throw new ValidationError([{ field: "file", message: "PDF file readable nahi hai. Valid, unencrypted PDF select karein." }]);
+    throw new ValidationError([{ field: "file", message: "The PDF could not be read. Select a valid, unencrypted PDF." }]);
   }
 }
 

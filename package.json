@@ -27,6 +27,11 @@
     "admin:bootstrap": "tsc -p tsconfig.admin-cli.json && node --conditions=react-server .admin-build/scripts/bootstrap-admin.js",
     "seed:products": "tsc -p tsconfig.admin-cli.json && node --conditions=react-server .admin-build/scripts/seed/products.js",
     "db:indexes": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/initialize-indexes.js",
+    "email:test:resend": "tsc -p tsconfig.admin-cli.json && node --conditions=react-server .admin-build/scripts/email-test-resend.js",
+    "email:worker:local": "node scripts/local-outbox-worker.mjs",
+    "db:inspect": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/initialize-indexes.js --inspect",
+    "db:verify": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/initialize-indexes.js --verify",
+    "db:init": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/initialize-indexes.js --init",
     "orders:maintain": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/maintain-orders.js",
     "payments:diagnose": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/diagnose-payment-recovery.js",
     "payments:recover-expired": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/recover-expired-payment.js"

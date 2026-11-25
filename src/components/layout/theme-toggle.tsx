@@ -23,7 +23,7 @@ export default function ThemeToggle() {
       }}
       aria-label={mounted ? `${activeTheme}. Change theme` : "Change theme"}
       title={mounted ? `${activeTheme} — Change theme` : "Change theme"}
-      className="flex size-10 items-center justify-center rounded-full border border-border bg-surface text-foreground transition-colors hover:bg-surface-secondary"
+      className="flex size-11 items-center justify-center rounded-full border border-border bg-surface text-foreground transition-colors hover:bg-surface-secondary"
     >
       <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
     </button>

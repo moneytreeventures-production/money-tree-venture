@@ -55,16 +55,21 @@ async function CheckoutContent({ params }: CheckoutPageProps) {
         ))}
         <li className="flex justify-between gap-5 py-3 text-sm text-foreground-secondary"><span>Subtotal</span><span>{formatINR(order.subtotalPaise ?? 0)}</span></li>
         {!!order.discountPaise && <li className="flex justify-between gap-3 py-3 text-sm text-foreground-secondary"><span className="min-w-0 break-all">{order.couponSnapshot?.code ? `Coupon ${order.couponSnapshot.code}` : "Coupon discount"}</span><span className="shrink-0">−{formatINR(order.discountPaise)}</span></li>}
-        <li className="flex justify-between gap-5 py-3 text-sm text-foreground-secondary"><span>Applicable tax (included)</span><span>{formatINR(order.taxPaise ?? 0)}</span></li>
+        {!!order.taxPaise && <li className="flex justify-between gap-5 py-3 text-sm text-foreground-secondary"><span>Tax recorded on this order</span><span>{formatINR(order.taxPaise)}</span></li>}
         <li className="flex justify-between gap-5 py-5 text-base font-semibold text-foreground"><span>Total · INR</span><span>{formatINR(order.totalPaise ?? 0)}</span></li>
       </ul>
-      <p className="mt-4 text-xs leading-5 text-foreground-secondary">The included tax amount reflects this order’s stored pricing snapshot; it is not a GST tax invoice. Tax treatment is under review. <Link href="/billing-information" className="underline underline-offset-2">Read Billing Information</Link>.</p>
-      {order.paymentStatus === "pending" && <p className="mt-6 rounded-xl border border-border bg-surface px-5 py-4 text-sm leading-6 text-foreground-secondary" role="status">Payment is processing. This page will check the status automatically.</p>}
+      {!!order.taxPaise && <p className="mt-4 text-xs leading-5 text-foreground-secondary">This historical order shows the tax amount recorded at purchase. This summary is not a GST tax invoice. <Link href="/billing-information" className="underline underline-offset-2">Read Billing Information</Link>.</p>}
+      {order.paymentStatus === "pending" && <p className="mt-6 rounded-xl border border-border bg-surface px-5 py-4 text-sm leading-6 text-foreground-secondary" role="status">Payment is processing. This page will check the status automatically. Verification can continue if you leave this page.</p>}
       {order.paymentStatus === "failed" && !isExpired && <p className="mt-6 rounded-xl border border-border bg-surface px-5 py-4 text-sm leading-6 text-foreground-secondary" role="status">The last payment attempt did not complete. We are confirming whether this order is safe to retry. Check its status below.</p>}
       {payable && <HostedCheckout orderId={order.id!} orderReference={order.orderReference!} totalPaise={order.totalPaise!} />}
       {order.id && <PaymentStatusCheck orderId={order.id} autoCheck={order.paymentStatus === "pending" || (order.paymentStatus === "failed" && order.orderStatus === "awaiting_payment")} />}
       {order.id && order.orderStatus === "expired" && order.paymentStatus === "failed" && <div className="mt-6"><RetryExpiredOrder orderId={order.id} /></div>}
       {!payable && <p className="mt-8 rounded-xl border border-border bg-surface px-5 py-4 text-sm leading-6 text-foreground-secondary" role="status">{orderPaymentMessage(order.orderStatus, order.paymentStatus, isExpired)}</p>}
+      <nav aria-label="Order navigation" className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-accent-foreground">
+        <Link href="/account/orders" className="min-h-10 content-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">View My Orders</Link>
+        <Link href="/products" className="min-h-10 content-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">Continue Shopping</Link>
+        <Link href="/" className="min-h-10 content-center underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">Return to Home</Link>
+      </nav>
     </main>
   );
 }

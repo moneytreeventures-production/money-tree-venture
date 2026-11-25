@@ -25,11 +25,11 @@ export async function uploadProductPdf(productId: string, file: File, adminUserI
   if (product.productType !== "pdf" || product.publicationStatus === "archived") throw new ConflictError();
   const maximumBytes = getR2Configuration().maxUploadBytes;
   if (file.type !== "application/pdf" || file.size < 5 || file.size > maximumBytes || !file.name.toLowerCase().endsWith(".pdf")) {
-    throw new ValidationError([{ field: "file", message: "PDF file select karein, jo configured size limit ke andar ho." }]);
+    throw new ValidationError([{ field: "file", message: "Select a PDF within the allowed size limit." }]);
   }
   const body = new Uint8Array(await file.arrayBuffer());
   if (body.byteLength < 5 || body.byteLength > maximumBytes || Buffer.from(body.subarray(0, 5)).toString("ascii") !== "%PDF-") {
-    throw new ValidationError([{ field: "file", message: "Valid PDF file select karein." }]);
+    throw new ValidationError([{ field: "file", message: "Select a valid PDF file." }]);
   }
   await assertReadablePdfDocument(body);
 

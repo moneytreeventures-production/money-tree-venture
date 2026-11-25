@@ -72,9 +72,9 @@ function NavbarContent() {
   }, [mobileMenuOpen]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/80 bg-background/95 backdrop-blur-xl">
-      <div className="mx-auto flex min-h-[76px] max-w-[1360px] items-center justify-between gap-3 px-5 sm:px-8 lg:px-12">
-        <Link href="/" className="group flex shrink-0 items-center gap-3" aria-label="MoneyTreeVentures — homepage">
+    <header className="mt-header sticky top-0 border-b border-border/80 bg-background/95 backdrop-blur-xl">
+      <div className="mt-container flex min-h-[76px] items-center justify-between gap-3">
+        <Link href="/" className="group flex min-h-11 shrink-0 items-center gap-3" aria-label="MoneyTreeVentures — homepage">
           <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-background transition-transform duration-300 group-hover:-rotate-6"><Sprout size={22} strokeWidth={1.8} /></span>
           <span className="flex flex-col leading-none">
             <span className="text-[15px] font-bold tracking-tight text-foreground sm:text-base">MoneyTree<span className="text-accent-foreground">Ventures</span></span>
@@ -93,27 +93,27 @@ function NavbarContent() {
           <ThemeToggle />
           <Link href="/cart" aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-[13px] font-semibold text-foreground-secondary transition-colors hover:bg-surface-secondary hover:text-foreground"><ShoppingBag size={17} />Cart ({count})</Link>
           <Link href={accountHref} className="inline-flex min-h-11 items-center rounded-full px-3 text-[13px] font-semibold text-foreground-secondary transition-colors hover:bg-surface-secondary hover:text-foreground">{isAuthorizedAdmin ? "Admin Panel" : "Account"}</Link>
-          <Link href="/products" className="group inline-flex min-h-11 items-center gap-2 rounded-full bg-accent px-4 text-[13px] font-semibold text-[#0f1e36] transition-all hover:bg-accent-hover hover:shadow-[0_8px_22px_-10px_var(--accent)]">Explore kits<ArrowDownRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5" /></Link>
+          <Link href="/products" className="mt-button mt-button-primary group px-4 text-[13px] hover:shadow-[0_8px_22px_-10px_var(--accent)]">Explore kits<ArrowDownRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5" /></Link>
         </div>
 
         <div className="flex items-center gap-2 xl:hidden">
           <ThemeToggle />
-          <button ref={menuButtonRef} type="button" onClick={() => setMenuOpenedAtPath(mobileMenuOpen ? null : pathname)} aria-label={mobileMenuOpen ? "Close menu" : "Open menu"} aria-controls="mobile-navigation" aria-expanded={mobileMenuOpen} className="flex size-10 items-center justify-center rounded-full border border-border bg-surface text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-accent">
+          <button ref={menuButtonRef} type="button" onClick={() => setMenuOpenedAtPath(mobileMenuOpen ? null : pathname)} aria-label={mobileMenuOpen ? "Close menu" : "Open menu"} aria-controls="mobile-navigation" aria-expanded={mobileMenuOpen} className="flex size-11 items-center justify-center rounded-full border border-border bg-surface text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-accent">
             {mobileMenuOpen ? <X size={19} /> : <Menu size={19} />}
           </button>
         </div>
       </div>
 
-      {mobileMenuOpen && <nav id="mobile-navigation" aria-label="Mobile navigation" className="border-t border-border bg-background px-5 py-4 xl:hidden">
-        <div className="mx-auto flex max-w-[1360px] flex-col gap-1 sm:px-3">
+      {mobileMenuOpen && <nav id="mobile-navigation" aria-label="Mobile navigation" className="border-t border-border bg-background py-4 xl:hidden">
+        <div className="mt-container flex flex-col gap-1">
           {navigation.map((item) => {
             const active = isActive(pathname, item.href);
             return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} onClick={() => setMenuOpenedAtPath(null)} className={`rounded-xl px-3 py-3 text-sm font-medium transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent ${active ? "bg-surface-secondary text-foreground" : "text-foreground-secondary"}`}>{item.label}</Link>;
           })}
-          <div className="mt-2 grid grid-cols-3 gap-2 border-t border-border pt-3">
+          <div className="mt-2 grid grid-cols-2 gap-2 border-t border-border pt-3">
             <Link href="/cart" aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`} onClick={() => setMenuOpenedAtPath(null)} className="rounded-xl px-2 py-3 text-center text-sm font-semibold text-foreground-secondary hover:bg-surface-secondary">Cart ({count})</Link>
             <Link href={accountHref} onClick={() => setMenuOpenedAtPath(null)} className="rounded-xl px-3 py-3 text-center text-sm font-semibold text-foreground-secondary hover:bg-surface-secondary">{isAuthorizedAdmin ? "Admin Panel" : "Account"}</Link>
-            <Link href="/products" onClick={() => setMenuOpenedAtPath(null)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-accent text-sm font-semibold text-[#0f1e36] transition-colors hover:bg-accent-hover">Explore kits <ArrowDownRight size={16} /></Link>
+            <Link href="/products" onClick={() => setMenuOpenedAtPath(null)} className="mt-button mt-button-primary col-span-2">Explore kits <ArrowDownRight size={16} /></Link>
           </div>
         </div>
       </nav>}
@@ -123,8 +123,8 @@ function NavbarContent() {
 
 function NavbarFallback() {
   return (
-    <header className="sticky top-0 z-50 border-b border-border/80 bg-background/95 backdrop-blur-xl" aria-hidden="true">
-      <div className="mx-auto min-h-[76px] max-w-[1360px] px-5 sm:px-8 lg:px-12" />
+    <header className="mt-header sticky top-0 border-b border-border/80 bg-background/95 backdrop-blur-xl" aria-hidden="true">
+      <div className="mt-container min-h-[76px]" />
     </header>
   );
 }

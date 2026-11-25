@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Admin area", robots: { index: false,
 
 export default function AdminLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center px-6 text-sm text-foreground-secondary" role="status">Admin area load ho raha hai...</div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center px-6 text-sm text-foreground-secondary" role="status">Loading admin area...</div>}>
       <AdminGate>{children}</AdminGate>
     </Suspense>
   );
@@ -24,10 +24,10 @@ async function AdminGate({ children }: Readonly<{ children: ReactNode }>) {
         <main className="flex min-h-screen items-center justify-center px-5 py-16 sm:px-8">
           <section className="w-full max-w-xl rounded-[1.75rem] border border-border bg-surface p-8 shadow-[0_28px_80px_-48px_rgba(15,30,54,0.35)] sm:p-11">
             <p className="text-[11px] font-bold tracking-[0.18em] text-accent-foreground">ADMIN ACCESS</p>
-            <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-foreground">Is area ke liye access nahi hai</h1>
-            <p className="mt-4 text-sm leading-7 text-foreground-secondary">Is Google account ke liye admin permission verify nahi hui. Agar aap project ke approved owner hain, pehle sahi Google account se sign in karein; admin role sirf verified owner account ko secure bootstrap se mil sakta hai.</p>
+            <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-foreground">Admin access unavailable</h1>
+            <p className="mt-4 text-sm leading-7 text-foreground-secondary">This Google account does not have verified admin access. If you are the approved owner, sign in with the correct Google account.</p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link href="/admin/login" className="inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-background transition-colors hover:bg-primary-hover">Admin Login par jaayein</Link>
+              <Link href="/admin/login" className="inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-background transition-colors hover:bg-primary-hover">Go to Admin Login</Link>
               <SignOutButton compact redirectTo="/" />
             </div>
           </section>

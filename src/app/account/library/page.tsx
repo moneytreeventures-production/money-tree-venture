@@ -6,12 +6,13 @@ import { getCurrentCustomer } from "@/lib/auth/session";
 import { listCustomerLibraryPage } from "@/lib/fulfillment/download-service";
 import { AccountShell } from "@/components/account/account-shell";
 import { AccountResources } from "@/components/account/account-resources";
+import { SkeletonAccountContent } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = { title: "My Library", robots: { index: false, follow: false } };
 type Search = Promise<{ page?: string }>;
 
 export default function AccountLibraryPage({ searchParams }: { searchParams: Search }) {
-  return <Suspense fallback={<main className="mx-auto max-w-6xl px-5 py-16 text-sm text-foreground-secondary" role="status">Loading your library...</main>}><LibraryContent searchParams={searchParams} /></Suspense>;
+  return <Suspense fallback={<SkeletonAccountContent label="Loading your library..." />}><LibraryContent searchParams={searchParams} /></Suspense>;
 }
 
 async function LibraryContent({ searchParams }: { searchParams: Search }) {

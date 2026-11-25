@@ -40,6 +40,7 @@
     "@aws-sdk/client-s3": "^3.1170.0",
     "@aws-sdk/s3-request-presigner": "^3.1170.0",
     "@better-auth/mongo-adapter": "^1.7.25",
+    "@tailwindcss/turbopack": "4.3.3",
     "better-auth": "^1.7.25",
     "lucide-react": "^1.73.0",
     "mongoose": "^9.12.2",
@@ -54,7 +55,6 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@tailwindcss/turbopack": "4.3.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

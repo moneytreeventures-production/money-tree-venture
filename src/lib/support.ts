@@ -6,6 +6,7 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import { AuditLogModel, SupportRateModel, SupportRequestModel } from "@/lib/db/models";
 import { requireAdmin } from "@/lib/auth/admin";
 import { supportCategories, type SupportStatus } from "@/lib/db/models/support";
+import { supportOperation } from "@/lib/support-diagnostics";
 
 export const supportInput = z.object({
   name: z.string().trim().min(2).max(100),
@@ -17,13 +18,13 @@ export const supportInput = z.object({
 }).strict();
 export async function submitSupport(input: unknown) {
   const data = supportInput.parse(input);
-  await connectToDatabase();
+  await supportOperation("database_connection", () => connectToDatabase());
   const windowStart = new Date(Math.floor(Date.now() / 3600000) * 3600000);
   const identityHash = createHash("sha256").update(data.email + ":" + process.env.BETTER_AUTH_SECRET).digest("hex");
-  const counter = await SupportRateModel.findOneAndUpdate({ identityHash, windowStart }, { $inc: { count: 1 }, $setOnInsert: { createdAt: new Date() } }, { upsert: true, new: true }).lean().exec();
+  const counter = await supportOperation("rate_limit_counter", () => SupportRateModel.findOneAndUpdate({ identityHash, windowStart }, { $inc: { count: 1 }, $setOnInsert: { createdAt: new Date() } }, { upsert: true, new: true }).lean().exec());
   if (counter.count > 5) throw new Error("Too many requests. Please try later.");
   const reference = "MTV-" + randomBytes(6).toString("hex").toUpperCase();
-  await SupportRequestModel.create({ reference, name: data.name, email: data.email, category: data.category, subject: data.subject, message: data.message, status: "new" });
+  await supportOperation("ticket_creation", () => SupportRequestModel.create({ reference, name: data.name, email: data.email, category: data.category, subject: data.subject, message: data.message, status: "new" }));
   return { reference };
 }
 export async function listSupport(filters: { status?: SupportStatus; category?: string; search?: string; page: number }) {

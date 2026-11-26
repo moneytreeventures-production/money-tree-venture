@@ -5,7 +5,7 @@ import { CategoryModel, ProductModel, UserModel } from "../../src/lib/db/models"
 import { createCategory } from "../../src/lib/catalog/category-service";
 import { createProduct } from "../../src/lib/catalog/product-service";
 import { getServerEnv } from "../../src/lib/env/server";
-import { isVerifiedOwnerGoogleIdentity, OWNER_ADMIN_EMAIL, readGoogleAccountIdentity } from "../../src/lib/auth/google-identity";
+import { getAllowedAdminEmails, isVerifiedOwnerGoogleIdentity, OWNER_ADMIN_EMAIL, readGoogleAccountIdentity } from "../../src/lib/auth/google-identity";
 import { assertSeedApplyTarget, buildProductSeedPlan, SeedApplyGuardError } from "./product-seed-plan";
 
 interface SeedArgs {
@@ -90,7 +90,7 @@ async function applyProductSeed(args: SeedArgs): Promise<void> {
     const adminProfile = await UserModel.findOne({ emailNormalized: OWNER_ADMIN_EMAIL, role: "admin", status: "active" }).lean().exec();
     if (!adminProfile) throw new Error("Active owner administrator profile was not found.");
     const identity = await readGoogleAccountIdentity(adminProfile.authUserId);
-    if (!identity || !isVerifiedOwnerGoogleIdentity(identity)) throw new Error("Owner Google identity is not authorized for this seed operation.");
+    if (!identity || !isVerifiedOwnerGoogleIdentity(identity, getAllowedAdminEmails())) throw new Error("Owner Google identity is not authorized for this seed operation.");
 
     const categoriesBySlug = new Map<string, { id: string; sourceName: string }>();
     const categoryConflicts: string[] = [];

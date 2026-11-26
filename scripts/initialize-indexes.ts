@@ -42,6 +42,15 @@ export const managedModels: IndexableModel[] = [
   RefundModel, ReviewModel, SupportRequestModel, SupportRateModel,
 ];
 export const authCollectionNames = ["authUsers", "authSessions", "authAccounts", "authVerifications"] as const;
+const auxiliaryCollectionNames = ["bookingScheduleLocks"] as const;
+
+export function managedIndexInventory() {
+  return [
+    ...managedModels.map((model) => ({ collection: model.collection.collectionName, indexes: (model.schema?.indexes() ?? []).map(([key, options]) => ({ key, ...options })) })),
+    ...authCollectionNames.map((collection) => ({ collection, indexes: [] as Array<Record<string, unknown>>, managedBy: "Better Auth adapter; no application-declared index definitions" })),
+    ...auxiliaryCollectionNames.map((collection) => ({ collection, indexes: [] as Array<Record<string, unknown>>, managedBy: "MongoDB built-in _id_ index; created with first lock write" })),
+  ];
+}
 
 export function emailTestRateIndexDefinition() {
   const declaration = SupportRateModel.schema.indexes().find(([key, options]) =>
@@ -51,9 +60,24 @@ export function emailTestRateIndexDefinition() {
   return { name: options.name ?? "identityHash_1_windowStart_1", key: key as Record<string, 1 | -1>, unique: true as const };
 }
 
-type IndexDefinition = { name?: string; key: Record<string, unknown>; unique?: boolean; sparse?: boolean; partialFilterExpression?: unknown; expireAfterSeconds?: number; collation?: unknown };
+type IndexDefinition = { name?: string; key: Record<string, unknown>; unique?: boolean; sparse?: boolean; hidden?: boolean; partialFilterExpression?: unknown; expireAfterSeconds?: number; collation?: unknown; weights?: Record<string, number>; default_language?: string; language_override?: string; textIndexVersion?: number };
+function sameEntries(left: Record<string, unknown>, right: Record<string, unknown>): boolean {
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key) => Object.hasOwn(right, key) && left[key] === right[key]);
+}
+function textKeyMatches(expected: IndexDefinition, actual: IndexDefinition): boolean {
+  if (!Object.values(expected.key).some((value) => value === "text")) return false;
+  if (!sameEntries(actual.key, { _fts: "text", _ftsx: 1 })) return false;
+  const fields = Object.entries(expected.key).filter(([, value]) => value === "text").map(([field]) => field);
+  if (fields.length !== Object.keys(expected.key).length) return false;
+  const expectedWeights = expected.weights ?? Object.fromEntries(fields.map((field) => [field, 1]));
+  return Boolean(actual.weights && sameEntries(expectedWeights, actual.weights) &&
+    actual.default_language === (expected.default_language ?? "english") &&
+    actual.language_override === (expected.language_override ?? "language") &&
+    actual.textIndexVersion === (expected.textIndexVersion ?? 3));
+}
 function comparableIndex(index: IndexDefinition) {
-  return JSON.stringify({ key: index.key, unique: index.unique === true, sparse: index.sparse === true,
+  return JSON.stringify({ key: index.key, unique: index.unique === true, sparse: index.sparse === true, hidden: index.hidden === true,
     partialFilterExpression: index.partialFilterExpression ?? null,
     expireAfterSeconds: index.expireAfterSeconds ?? null, collation: index.collation ?? null });
 }
@@ -66,8 +90,10 @@ export function compareManagedIndexes(expected: IndexDefinition[], actual: Index
   for (const index of expected) {
     const name = resolvedIndexName(index);
     const found = actual.find((candidate) => candidate.name === name);
-    if (!found) missing.push(name);
-    else if (comparableIndex(index) !== comparableIndex(found)) incompatible.push(name);
+    if (!found && actual.some((candidate) => JSON.stringify(candidate.key) === JSON.stringify(index.key) || sameEntries(candidate.key, { _fts: "text", _ftsx: 1 }) && Object.values(index.key).includes("text"))) incompatible.push(name);
+    else if (!found) missing.push(name);
+    else if (comparableIndex(index) !== comparableIndex(textKeyMatches(index, found) ? { ...found, key: index.key } : found)) incompatible.push(name);
+    else if (sameEntries(found.key, { _fts: "text", _ftsx: 1 }) && !textKeyMatches(index, found)) incompatible.push(name);
   }
   return { missing, incompatible };
 }
@@ -81,12 +107,21 @@ export async function inspectManagedDatabase() {
     const name = model.collection.collectionName;
     const expected = (model.schema?.indexes() ?? []).map(([key, options]) => ({ key, ...options, name: options.name as string | undefined }));
     const actual = existing.has(name) ? await db.collection(name).indexes() : [];
-    collections.push({ name, exists: existing.has(name), expected, actual: actual.map(({ name: indexName, key, unique, sparse, partialFilterExpression, expireAfterSeconds, collation }) => ({ name: indexName, key, unique, sparse, partialFilterExpression, expireAfterSeconds, collation })), ...compareManagedIndexes(expected, actual) });
+    collections.push({ name, exists: existing.has(name), expected, actual: actual.map(({ name: indexName, key, unique, sparse, hidden, partialFilterExpression, expireAfterSeconds, collation, weights, default_language, language_override, textIndexVersion }) => ({ name: indexName, key, unique, sparse, hidden, partialFilterExpression, expireAfterSeconds, collation, weights, default_language, language_override, textIndexVersion })), ...compareManagedIndexes(expected, actual) });
   }
   for (const name of authCollectionNames) {
     collections.push({ name, exists: existing.has(name), expected: [], actual: existing.has(name) ? (await db.collection(name).indexes()).map(({ name: indexName, key, unique, sparse, partialFilterExpression, expireAfterSeconds, collation }) => ({ name: indexName, key, unique, sparse, partialFilterExpression, expireAfterSeconds, collation })) : [], missing: [], incompatible: [] });
   }
-  return { database: mongoose.connection.name, ready: collections.every((entry) => entry.exists && !entry.missing.length && !entry.incompatible.length), collections };
+  for (const name of auxiliaryCollectionNames) {
+    collections.push({ name, exists: existing.has(name), expected: [], actual: existing.has(name) ? (await db.collection(name).indexes()).map(({ name: indexName, key, unique, sparse, partialFilterExpression, expireAfterSeconds, collation }) => ({ name: indexName, key, unique, sparse, partialFilterExpression, expireAfterSeconds, collation })) : [], missing: [], incompatible: [] });
+  }
+  const verifiedCollections = collections.map((entry) => ({
+    ...entry,
+    status: entry.expected.length === 0 ? "NOT_APPLICABLE" as const :
+      entry.incompatible.length ? "CONFLICT" as const :
+      !entry.exists || entry.missing.length ? "MISSING" as const : "PASS" as const,
+  }));
+  return { database: mongoose.connection.name, ready: verifiedCollections.every((entry) => entry.status === "PASS" || entry.status === "NOT_APPLICABLE"), collections: verifiedCollections };
 }
 
 export class IndexInitializationUsageError extends Error {}
@@ -114,6 +149,18 @@ async function createModelIndexes(model: IndexableModel & { schema?: { indexes()
       model.schema?.indexes().map(([, options]) => options.name).filter((name): name is string => Boolean(name)) ?? [],
       safeToken(source?.name) ?? "Error", typeof source?.code === "number" ? source.code : undefined, safeToken(source?.codeName));
   }
+}
+
+export async function bootstrapManagedIndexes(
+  models: readonly IndexableModel[] = managedModels,
+  inspect: () => Promise<{ ready: boolean; collections: Array<{ name: string; expected: unknown[]; missing: string[]; incompatible: string[] }> }> = inspectManagedDatabase,
+): Promise<void> {
+  const prior = await inspect();
+  const conflicts = prior.collections.filter((entry) => entry.incompatible.length);
+  if (conflicts.length) throw new IndexInitializationUsageError(`Index conflicts found in ${conflicts.map((entry) => entry.name).join(", ")}; no indexes were changed. Inspect and resolve each conflict with owner approval.`);
+  for (const model of models) await model.createIndexes();
+  const report = await inspect();
+  if (!report.ready) throw new IndexInitializationUsageError("Bootstrap completed without all required indexes; no existing indexes were removed. Review missing indexes and duplicate data.");
 }
 
 
@@ -330,10 +377,14 @@ async function removeLegacyRefundIndex(dropRequested: boolean): Promise<void> {
 }
 
 export async function runIndexInitialization(args: readonly string[]): Promise<void> {
+  if (args.length === 1 && args[0] === "--inventory") {
+    console.info(JSON.stringify(managedIndexInventory()));
+    return;
+  }
   const rateMode = args[0] === "--rate-preflight" || args[0] === "--rate-init" ? args[0] : null;
-  const mode = args[0] === "--inspect" || args[0] === "--verify" || args[0] === "--init" ? args[0] : null;
+  const mode = args[0] === "--inspect" || args[0] === "--verify" || args[0] === "--init" || args[0] === "--bootstrap" ? args[0] : null;
   const input = parseIndexInitializationArgs(mode || rateMode ? args.slice(1, 3) : args);
-  if (mode && (args.length !== (mode === "--init" ? 4 : 3) || (mode === "--init" && args[3] !== "--confirm-non-production"))) throw new IndexInitializationUsageError("Database initialization requires --confirm-non-production; inspection and verification are read-only.");
+  if (mode && (args.length !== (mode === "--init" || mode === "--bootstrap" ? 4 : 3) || ((mode === "--init" || mode === "--bootstrap") && args[3] !== "--confirm-non-production"))) throw new IndexInitializationUsageError("Database initialization requires --confirm-non-production; inspection and verification are read-only.");
   if (rateMode && (args.length !== (rateMode === "--rate-init" ? args[2] === "moneytreeventures" ? 5 : 4 : 3) || (rateMode === "--rate-init" && args[3] !== "--confirm-non-production") || (rateMode === "--rate-init" && args[2] === "moneytreeventures" && args[4] !== "--confirm-existing-development"))) throw new IndexInitializationUsageError("Rate index setup requires exact database confirmation and explicit non-production approval.");
   loadEnvConfig(process.cwd());
   // Refuse a misconfigured target before opening any database connection.
@@ -344,6 +395,7 @@ export async function runIndexInitialization(args: readonly string[]): Promise<v
   catch { throw new IndexInitializationUsageError("MongoDB URI is invalid. No database connection was attempted."); }
   if (uriDatabase && uriDatabase !== input.databaseName) throw new IndexInitializationUsageError("MongoDB URI database differs from the confirmed target. No connection was attempted.");
   if (mode === "--init" && input.databaseName === "moneytreeventures") throw new IndexInitializationUsageError("Protected database initialization requires a separate approved workflow.");
+  if (mode === "--bootstrap" && input.databaseName === "moneytreeventures") throw new IndexInitializationUsageError("Bootstrap is disabled for the protected production database.");
   if (rateMode === "--rate-init" && input.databaseName === "moneytreeventures" && (process.env.EMAIL_TEST_DATABASE_ROLE !== "local-development-only" || process.env.EMAIL_TEST_DATABASE_NAME !== input.databaseName || process.env.NETLIFY === "true")) throw new IndexInitializationUsageError("Existing development database index setup requires a local-only role attestation; no index was changed.");
   try {
     await connectToDatabase();
@@ -394,6 +446,14 @@ export async function runIndexInitialization(args: readonly string[]): Promise<v
       const report = await inspectManagedDatabase();
       if (!report.ready) throw new IndexInitializationUsageError("Initialization finished without all required indexes; inspect before retrying.");
       console.info(`Database ${actualDatabaseName} initialized and verified.`);
+      return;
+    }
+    if (mode === "--bootstrap") {
+      // createIndexes is idempotent for matching definitions and only adds
+      // declared indexes. It never drops or rebuilds an existing index.
+      await bootstrapManagedIndexes(managedModels, inspectManagedDatabase);
+      const report = await inspectManagedDatabase();
+      console.info(JSON.stringify(report));
       return;
     }
 

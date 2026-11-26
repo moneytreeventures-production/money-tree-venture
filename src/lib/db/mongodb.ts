@@ -99,6 +99,8 @@ const connect = createConnectionManager<Connection, MongoConfig>(cache, async ({
       maxPoolSize: 5,
       minPoolSize: 0,
       autoIndex: false,
+      serverSelectionTimeoutMS: 10_000,
+      connectTimeoutMS: 10_000,
     });
     return mongoose.connection;
   } catch (error) {

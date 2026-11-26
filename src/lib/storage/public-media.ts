@@ -162,8 +162,15 @@ export function createPublicMediaStorage(dependencies: PublicMediaDependencies):
   };
 }
 
+export function getPublicMediaS3ClientOptions(configuration: PublicMediaConfiguration) {
+  return { endpoint: configuration.endpoint, region: configuration.region, forcePathStyle: true as const, requestChecksumCalculation: "WHEN_REQUIRED" as const, credentials: { accessKeyId: configuration.accessKeyId, secretAccessKey: configuration.secretAccessKey } };
+}
+
 function createAwsClient(configuration: PublicMediaConfiguration): MediaR2Transport {
-  const client = new S3Client({ endpoint: configuration.endpoint, region: configuration.region, forcePathStyle: true, credentials: { accessKeyId: configuration.accessKeyId, secretAccessKey: configuration.secretAccessKey } });
+  // R2 presigned browser PUTs use Content-Type as their only required request
+  // header. Suppress the SDK's optional CRC32 request checksum so it does not
+  // add checksum query parameters that browser clients cannot reliably match.
+  const client = new S3Client(getPublicMediaS3ClientOptions(configuration));
   return { send: (command) => client.send(command as never), presign: (command, seconds) => getSignedUrl(client, command as never, { expiresIn: seconds }) };
 }
 

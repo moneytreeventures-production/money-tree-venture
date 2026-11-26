@@ -7,11 +7,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminHomePage() {
   return (
-    <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
+    <main className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 sm:py-8">
       <header className="max-w-3xl">
         <p className="text-[11px] font-bold tracking-[0.18em] text-accent-foreground">ADMINISTRATION</p>
         <h1 className="mt-3 text-4xl font-semibold tracking-[-0.055em] text-foreground sm:text-5xl">Workspace overview</h1>
-        <p className="mt-4 text-base leading-7 text-foreground-secondary">Current database totals for the catalogue and customer operations.</p>
+        <p className="mt-4 text-base leading-7 text-foreground-secondary">Live catalogue and operations totals from the connected database. Counts are snapshots when this page loads.</p>
       </header>
       <Suspense fallback={<DashboardOverviewFallback />}>
         <DashboardOverview />
@@ -26,25 +26,27 @@ async function DashboardOverview() {
   const metrics = [
     { label: "Products", value: counts.products, detail: `${counts.publishedProducts} published · ${counts.draftProducts} drafts · ${counts.archivedProducts} archived`, href: "/admin/products" },
     { label: "Categories", value: counts.categories, detail: "Organize the public catalogue", href: "/admin/categories" },
-    { label: "Orders", value: counts.orders, detail: "Order operations are not available in this workspace yet" },
-    { label: "Customers", value: counts.customers, detail: "Customer management is not available in this workspace yet" },
+    { label: "Orders", value: counts.orders, detail: "Count only; no order-management page is available" },
+    { label: "Customers", value: counts.customers, detail: "Active and blocked customer profiles; no management page is available" },
     { label: "Bookings to schedule", value: counts.pendingBookings, detail: "Call Guidance bookings awaiting scheduling", href: "/admin/bookings" },
   ];
 
   return (
     <>
-      <section aria-label="Workspace totals" className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section aria-label="Workspace totals" className="mt-9 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
         {metrics.map((metric) => {
           const content = <><p className="text-sm font-medium text-foreground-secondary">{metric.label}</p><p className="mt-3 text-4xl font-semibold tracking-tight text-foreground">{metric.value.toLocaleString("en-IN")}</p><p className="mt-3 text-sm leading-6 text-foreground-secondary">{metric.detail}</p></>;
-          return metric.href ? <Link key={metric.label} href={metric.href} className="rounded-2xl border border-border bg-surface p-6 transition-colors hover:border-accent/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">{content}<span className="mt-5 inline-block text-sm font-semibold text-accent-foreground">Manage {metric.label.toLowerCase()} →</span></Link> : <article key={metric.label} className="rounded-2xl border border-border bg-surface p-6">{content}</article>;
+          return metric.href ? <Link key={metric.label} href={metric.href} className="mt-card mt-card-interactive block min-w-0 p-6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">{content}<span className="mt-5 inline-block text-sm font-semibold text-accent-foreground">Manage {metric.label.toLowerCase()} →</span></Link> : <article key={metric.label} className="mt-card min-w-0 p-6">{content}</article>;
         })}
       </section>
       <section className="mt-9 rounded-2xl border border-border bg-surface p-6 sm:p-8">
-        <h2 className="text-lg font-semibold text-foreground">Available management</h2>
+        <h2 className="text-lg font-semibold text-foreground">Operations shortcuts</h2>
         <ul className="mt-4 flex flex-wrap gap-3">
           <li><ManageProductsLink /></li>
           <li><Link href="/admin/categories" className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm font-semibold text-foreground hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Manage categories</Link></li>
           <li><Link href="/admin/bookings" className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm font-semibold text-foreground hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Manage bookings</Link></li>
+          <li><Link href="/admin/reviews" className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm font-semibold text-foreground hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Moderate reviews</Link></li>
+          <li><Link href="/admin/support" className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm font-semibold text-foreground hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Support inbox</Link></li>
         </ul>
       </section>
     </>

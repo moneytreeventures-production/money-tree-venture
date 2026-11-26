@@ -34,7 +34,7 @@ export function AccessibleOverlay({ open, onClose, titleId, descriptionId, varia
 
   return <AnimatePresence>
     {open && <motion.div key="overlay" className="fixed inset-0 z-[var(--layer-dialog)] overflow-y-auto bg-black/50 p-3 sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reducedMotion ? 0 : 0.16 }}>
-      <motion.section ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} tabIndex={-1} className={`${panelClass} ${className}`} initial={panelMotion.hidden} animate={panelMotion.visible} exit={panelMotion.exit} transition={{ ...interactionMotion.layout, duration: reducedMotion ? 0 : 0.2 }}>
+      <motion.section ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descriptionId} tabIndex={-1} className={`${panelClass} ${className}`} initial={panelMotion.hidden} animate={panelMotion.visible} exit={panelMotion.exit} transition={variant === "drawer" && !reducedMotion ? { type: "spring", stiffness: 350, damping: 35 } : { ...interactionMotion.layout, duration: reducedMotion ? 0 : 0.2 }}>
         {children}
       </motion.section>
     </motion.div>}

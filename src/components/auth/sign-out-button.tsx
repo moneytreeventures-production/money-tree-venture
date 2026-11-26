@@ -6,7 +6,7 @@ import { authClient } from "@/lib/auth/client";
 import { invokeSignOut } from "@/lib/auth/client-actions";
 
 interface SignOutButtonProps {
-  redirectTo?: "/" | "/login";
+  redirectTo?: "/" | "/login" | "/admin/login";
   compact?: boolean;
 }
 

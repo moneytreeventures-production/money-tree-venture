@@ -27,6 +27,7 @@ interface Props { initialProducts?: AdminProduct[]; categories?: Category[] }
 const typeLabels: Record<ProductType, string> = { pdf: "PDF", pdf_bundle: "PDF Bundle", call_guidance: "Consultant Call" };
 const statusLabels: Record<ProductStatus, string> = { draft: "Draft", published: "Published", archived: "Archived" };
 const inputClass = "min-h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
+const filterClass = "min-h-11 min-w-36 rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
 const labelClass = "grid gap-2 text-sm font-medium text-foreground";
 
 function readError(result: ApiResult<unknown>, fallback: string) {
@@ -152,6 +153,7 @@ export function AdminProducts(props: Props) {
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminProduct | null>(null);
 
   async function loadCategories() {
     setCategoryLoadState("loading");
@@ -219,20 +221,19 @@ export function AdminProducts(props: Props) {
       const response = await fetch(`/api/admin/products/${product._id}/status`, { method: "PATCH", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: next }) });
       const result = await response.json() as ApiResult<unknown>;
       if (!response.ok || !result.success) throw new Error(readError(result, "The status could not be updated."));
-      setFeedback(`${productDisplayName(product)} ka status ${statusLabels[next]} ho gaya.`); await refresh();
+      setFeedback(`${productDisplayName(product)} status changed to ${statusLabels[next]}.`); await refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "The status could not be updated."); }
     finally { setBusy(null); }
   }
 
   async function removeProduct(product: AdminProduct) {
-    if (!window.confirm(`Permanently delete “${productDisplayName(product)}”? Products linked to customers or orders cannot be deleted; archive them instead.`)) return;
     setBusy(product._id); setError(""); setFeedback("");
     try {
       const response = await fetch(`/api/admin/products/${product._id}`, { method: "DELETE", credentials: "same-origin" });
       const result = await response.json() as ApiResult<unknown>;
       if (!response.ok || !result.success) throw new Error(readError(result, "The product could not be deleted. Archive products linked to customer history."));
-      setFeedback("The product and its unreferenced private PDF asset were deleted."); await refresh();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "The product could not be deleted."); }
+      setDeleteTarget(null); setFeedback("The product and its unreferenced private PDF asset were deleted."); await refresh();
+    } catch (cause) { setDeleteTarget(null); setError(cause instanceof Error ? cause.message : "The product could not be deleted."); }
     finally { setBusy(null); }
   }
 
@@ -244,9 +245,9 @@ export function AdminProducts(props: Props) {
     </div>
     <div className="mt-8 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface p-4">
       <label className="min-w-52 flex-1"><span className="sr-only">Product search</span><input className={inputClass} value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void refresh(1); }} placeholder="Search title or short description" /></label>
-      <select aria-label="Publication status filter" className={`${inputClass} w-auto min-w-36`} value={status} onChange={(event) => setStatus(event.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select>
-      <select aria-label="Product type filter" className={`${inputClass} w-auto min-w-40`} value={productType} onChange={(event) => setProductType(event.target.value)}><option value="">All types</option><option value="pdf">PDF</option><option value="pdf_bundle">PDF Bundle</option><option value="call_guidance">Consultant Call</option></select>
-      <select aria-label="Category filter" className={`${inputClass} w-auto min-w-40`} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">All categories</option>{categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
+      <select aria-label="Publication status filter" className={filterClass} value={status} onChange={(event) => setStatus(event.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select>
+      <select aria-label="Product type filter" className={filterClass} value={productType} onChange={(event) => setProductType(event.target.value)}><option value="">All types</option><option value="pdf">PDF</option><option value="pdf_bundle">PDF Bundle</option><option value="call_guidance">Consultant Call</option></select>
+      <select aria-label="Category filter" className={filterClass} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">All categories</option>{categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
       <button type="button" onClick={() => void refresh(1)} className="min-h-11 rounded-full border border-border px-5 text-sm font-semibold text-foreground transition hover:bg-background">Search</button>
     </div>
     {feedback && <p className="mt-4 rounded-xl border border-emerald-700/20 bg-emerald-500/10 px-4 py-3 text-sm text-foreground" role="status">{feedback}</p>}
@@ -263,7 +264,7 @@ export function AdminProducts(props: Props) {
         const displayedStatus = product.hasValidStatus ? statusLabels[product.publicationStatus] : "Unknown status";
         const productCategories = product.categoryIds.map((id) => categories.find((category) => category._id === id)?.name).filter((name): name is string => Boolean(name));
         return <article key={product._id} className="grid gap-4 border-b border-border p-4 last:border-0 sm:p-5 lg:grid-cols-[minmax(0,2fr)_minmax(85px,.65fr)_minmax(100px,.8fr)_minmax(105px,.85fr)_minmax(90px,.7fr)_minmax(220px,1.4fr)] lg:items-center">
-          <div className="flex min-w-0 items-center gap-4"><div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-background">{thumb ? <Image src={thumb} alt={`${displayName} thumbnail`} fill sizes="64px" unoptimized className="object-cover" /> : <span className="px-1 text-center text-[10px] font-semibold text-foreground-secondary">No image</span>}</div><div className="min-w-0"><h2 className="truncate font-semibold text-foreground">{displayName}</h2><p className="mt-1 truncate text-xs text-foreground-secondary">{product.slug ? `/${product.slug}` : "Slug unavailable"}</p></div></div>
+          <div className="flex min-w-0 items-center gap-4"><div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-background">{thumb ? <Image src={thumb} alt={`${displayName} thumbnail`} fill sizes="64px" unoptimized className="object-cover" /> : <span className="px-1 text-center text-[10px] font-semibold text-foreground-secondary">No image</span>}</div><div className="min-w-0"><h2 className="break-words font-semibold text-foreground">{displayName}</h2><p className="mt-1 break-all text-xs text-foreground-secondary">{product.slug ? `/${product.slug}` : "Slug unavailable"}</p></div></div>
           <div><span className="lg:hidden text-xs text-foreground-secondary">Type: </span><span className="text-sm text-foreground-secondary">{displayedType}</span>{product.bundleKind && product.hasValidType && <span className="ml-1 text-xs text-foreground-secondary">({product.bundleKind === "starter_kit" ? "Starter Kit" : "Bundle"})</span>}</div>
           <div className="text-sm text-foreground-secondary"><span className="mb-1 block text-[11px] lg:hidden">Category</span><span>{productCategories.join(", ") || (product.categoryIds.length ? "Category unavailable" : "No category")}</span></div>
           <div><p className="text-sm font-semibold text-foreground">{product.hasValidPrice ? `INR ${rupees(product.pricePaise)}` : "Price unavailable"}</p>{product.compareAtPricePaise !== undefined && <p className="mt-1 text-xs text-foreground-secondary">Compare at INR {rupees(product.compareAtPricePaise)}</p>}{product.featured && <span className="mt-1 inline-block rounded-full border border-accent/30 px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">Featured</span>}</div>
@@ -272,13 +273,14 @@ export function AdminProducts(props: Props) {
             {product.hasValidStatus && product.publicationStatus === "draft" && <button type="button" disabled={!lifecycleAllowed || busy === product._id} onClick={() => void changeStatus(product, "published")} className="min-h-11 rounded-full bg-primary px-3.5 text-xs font-semibold text-background hover:bg-primary-hover disabled:opacity-50">Publish</button>}
             {product.hasValidStatus && product.publicationStatus === "published" && <button type="button" disabled={!lifecycleAllowed || busy === product._id} onClick={() => void changeStatus(product, "draft")} className="min-h-11 rounded-full border border-border px-3.5 text-xs font-semibold text-foreground hover:bg-background disabled:opacity-50">Unpublish</button>}
             {product.hasValidStatus && product.publicationStatus !== "archived" && <button type="button" disabled={!lifecycleAllowed || busy === product._id} onClick={() => void changeStatus(product, "archived")} className="min-h-11 rounded-full border border-border px-3.5 text-xs font-semibold text-foreground-secondary hover:bg-background disabled:opacity-50">Archive</button>}
-            {product.hasValidStatus && product.publicationStatus !== "published" && <button type="button" disabled={!product.canManage || busy === product._id} onClick={() => void removeProduct(product)} className="min-h-11 rounded-full border border-red-700/20 px-3.5 text-xs font-semibold text-red-700 hover:bg-red-500/10 disabled:opacity-50">Delete</button>}
+            {product.hasValidStatus && product.publicationStatus !== "published" && <button type="button" disabled={!product.canManage || busy === product._id} onClick={() => setDeleteTarget(product)} className="min-h-11 rounded-full border border-red-700/20 px-3.5 text-xs font-semibold text-red-700 hover:bg-red-500/10 disabled:opacity-50">Delete</button>}
           </div>
           {product.recordWarnings?.length ? <p className="rounded-lg border border-amber-700/20 bg-amber-500/10 px-3 py-2 text-xs text-foreground sm:col-span-2 lg:col-span-6" role="status">Record needs attention: {product.recordWarnings.join("; ")}. Required data issues disable lifecycle changes; a thumbnail is optional. {product.legacyTitle ? "Legacy title is shown temporarily; save a canonical name to repair this record." : ""}</p> : null}
         </article>;
       })}
     </section>
-    <div className="mt-5 flex items-center justify-between"><button type="button" disabled={page <= 1} onClick={() => { setPage((value) => value - 1); void loadProducts(page - 1); }} className="min-h-11 rounded-full border border-border px-4 text-sm disabled:opacity-40">Pichhla</button><span className="text-sm text-foreground-secondary">Page {page} / {pages}</span><button type="button" disabled={page >= pages} onClick={() => { setPage((value) => value + 1); void loadProducts(page + 1); }} className="min-h-11 rounded-full border border-border px-4 text-sm disabled:opacity-40">Agla</button></div>
+    <nav aria-label="Product pagination" className="mt-5 flex items-center justify-between gap-3"><button type="button" disabled={page <= 1 || loading} onClick={() => void refresh(page - 1)} className="min-h-11 rounded-full border border-border px-4 text-sm disabled:opacity-40">Previous</button><span className="text-sm text-foreground-secondary">Page {page} of {pages}</span><button type="button" disabled={page >= pages || loading} onClick={() => void refresh(page + 1)} className="min-h-11 rounded-full border border-border px-4 text-sm disabled:opacity-40">Next</button></nav>
+    <AccessibleOverlay open={deleteTarget !== null} onClose={() => { if (!busy) setDeleteTarget(null); }} titleId="delete-product-title" descriptionId="delete-product-description" className="max-w-lg"><h2 id="delete-product-title" className="text-xl font-semibold text-foreground">Permanently delete product?</h2><p id="delete-product-description" className="mt-3 break-words text-sm leading-6 text-foreground-secondary">{deleteTarget ? productDisplayName(deleteTarget) : "This product"} will be deleted. Products linked to customers or orders cannot be deleted; archive them instead.</p><div className="mt-6 flex flex-wrap justify-end gap-3"><button type="button" disabled={Boolean(busy)} onClick={() => setDeleteTarget(null)} className="min-h-11 rounded-full border border-border px-5 text-sm font-semibold">Cancel</button><button type="button" disabled={Boolean(busy)} onClick={() => { if (deleteTarget) void removeProduct(deleteTarget); }} className="min-h-11 rounded-full bg-primary px-5 text-sm font-semibold text-background disabled:opacity-50">{busy ? "Deleting..." : "Delete product"}</button></div></AccessibleOverlay>
     {editing !== undefined && <ProductEditor product={editing} categories={categories} categoryLoadState={categoryLoadState} categoryLoadError={categoryLoadError} onRetryCategories={() => void loadCategories()} products={products} onClose={() => setEditing(undefined)} onSaved={async (message) => { setEditing(undefined); setFeedback(message); await refresh(); }} onError={setError} />}
   </div>;
 }
@@ -424,7 +426,7 @@ function ProductEditor({ product, categories, categoryLoadState, categoryLoadErr
           return;
         }
       }
-      await onSaved(product ? "Product changes save ho gaye." : "Product draft create ho gaya.");
+      await onSaved(product ? "Product changes saved." : "Product draft created.");
     } catch (cause) { const text = cause instanceof Error ? cause.message : "The product could not be saved."; setMessage(text); onError(text); }
     finally { setBusy(false); }
   }
@@ -449,7 +451,7 @@ function ProductEditor({ product, categories, categoryLoadState, categoryLoadErr
             <select aria-label="Select an existing uploaded thumbnail" value="" onChange={(event) => { if (event.target.value) void chooseSavedMedia("thumbnail", event.target.value); }} className={`${inputClass} w-auto`}><option value="">Choose saved thumbnail...</option>{mediaItems.filter((item) => item.kind === "thumbnail" && item.status === "ready" && item.publicUrl).map((item) => <option key={item.id} value={item.id}>{item.fileName}</option>)}</select>
             <button type="button" onClick={() => { if (window.confirm("Remove the product thumbnail reference? The stored media file will remain available.")) void chooseSavedMedia("thumbnail", ""); }} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground-secondary hover:bg-background">Remove thumbnail</button></div>
           {!product && <p className="text-xs font-normal text-foreground-secondary">Save this draft first to enable cloud uploads. No file is uploaded until you select one.</p>}
-          {mediaProgress !== null && mediaPreview?.kind === "thumbnail" && <div role="status" aria-live="polite"><progress className="w-full" max={100} value={mediaProgress} /><span className="text-xs text-foreground-secondary">Uploading and verifying: {mediaProgress}%</span></div>}
+          {mediaProgress !== null && mediaPreview?.kind === "thumbnail" && <div role="status" aria-live="polite"><progress className="w-full" max={100} value={mediaProgress} aria-label="Thumbnail transfer progress" /><span className="text-xs text-foreground-secondary">{mediaProgress === 100 ? "Transfer complete. Verifying thumbnail with server..." : `Transferring thumbnail: ${mediaProgress}%`}</span></div>}
           {!mediaPreview?.kind && !imageRefs && <p className="text-xs text-foreground-secondary">No thumbnail is set; catalogue cards will show the branded fallback.</p>}
         </div>
         <div className={`${labelClass} sm:col-span-2`}>
@@ -459,7 +461,7 @@ function ProductEditor({ product, categories, categoryLoadState, categoryLoadErr
           <div className="flex flex-wrap gap-2"><input ref={videoInput} type="file" accept="video/mp4,video/webm,.mp4,.webm" className="sr-only" aria-label="Choose a promotional video file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia(file, "promotional_video"); event.currentTarget.value = ""; }} /><button type="button" disabled={mediaProgress !== null} onClick={() => videoInput.current?.click()} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground hover:bg-background disabled:opacity-50">Upload Promotional Video</button>
             <select aria-label="Select an existing uploaded promotional video" value="" onChange={(event) => { if (event.target.value) void chooseSavedMedia("promotional_video", event.target.value); }} className={`${inputClass} w-auto`}><option value="">Choose saved video...</option>{mediaItems.filter((item) => item.kind === "promotional_video" && item.status === "ready" && item.publicUrl).map((item) => <option key={item.id} value={item.id}>{item.fileName}</option>)}</select>
             <button type="button" onClick={() => { if (window.confirm("Remove the promotional video reference? The stored media file will remain available.")) void chooseSavedMedia("promotional_video", ""); }} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground-secondary hover:bg-background">Remove video</button></div>
-          {mediaProgress !== null && mediaPreview?.kind === "promotional_video" && <p role="status" aria-live="polite" className="text-xs text-foreground-secondary">Uploading and verifying: {mediaProgress}%</p>}
+          {mediaProgress !== null && mediaPreview?.kind === "promotional_video" && <p role="status" aria-live="polite" className="text-xs text-foreground-secondary">{mediaProgress === 100 ? "Transfer complete. Verifying video with server..." : `Transferring video: ${mediaProgress}%`}</p>}
           <p className="text-xs font-normal text-foreground-secondary">MP4 and WebM only. Preview stays paused until Play; the product video is marketing media, not a paid download.</p>
         </div>
         {mediaError && <p className="sm:col-span-2 rounded-xl border border-red-700/20 bg-red-500/10 px-4 py-3 text-sm text-foreground" role="alert">{mediaError}</p>}

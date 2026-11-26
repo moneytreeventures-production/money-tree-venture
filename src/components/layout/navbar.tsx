@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense } from "react";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { ArrowDownRight, Menu, ShoppingBag, Sprout, X } from "lucide-react";
 import ThemeToggle from "./theme-toggle";
 import { useCart } from "@/components/cart/cart-provider";
@@ -22,18 +21,28 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function CartLink({ count, ready, mobile = false, onClick }: { count: number; ready: boolean; mobile?: boolean; onClick?: () => void }) {
+  const { openCart } = useCart();
+  return <Link href="/cart" aria-label={`Cart, ${ready ? count : 0} ${ready && count === 1 ? "item" : "items"}`} onClick={(event) => { if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return; event.preventDefault(); onClick?.(); openCart(); }} className={`group inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-3 text-sm font-semibold transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${mobile ? "border border-border bg-surface" : ""} text-foreground-secondary`}>
+    <span className="relative inline-flex size-6 items-center justify-center"><ShoppingBag size={19} aria-hidden="true" />{ready && count > 0 && <span key={count} aria-hidden="true" className="mt-cart-count absolute -right-2 -top-2 flex min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-5 text-[#0f1e36]">{count > 99 ? "99+" : count}</span>}</span>
+    <span>Cart</span>
+  </Link>;
+}
+
 function NavbarContent() {
   const pathname = usePathname();
   const [menuOpenedAtPath, setMenuOpenedAtPath] = useState<string | null>(null);
   const mobileMenuOpen = menuOpenedAtPath === pathname;
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const { count } = useCart();
-  const { data: session } = authClient.useSession();
+  const menuRef = useRef<HTMLElement>(null);
+  const { count, ready } = useCart();
+  const { data: session, isPending: sessionPending, error: sessionError } = authClient.useSession();
   const [adminNavigation, setAdminNavigation] = useState<{ sessionKey: string; authorized: boolean } | null>(null);
   const sessionUserId = session?.user?.id ?? null;
   const sessionUpdatedAt = session?.session?.updatedAt?.toString() ?? "";
   const sessionKey = sessionUserId ? `${sessionUserId}:${sessionUpdatedAt}` : null;
   const isAuthorizedAdmin = Boolean(sessionKey && adminNavigation?.sessionKey === sessionKey && adminNavigation.authorized);
+  const accountPending = !sessionError && (sessionPending || Boolean(sessionKey && adminNavigation?.sessionKey !== sessionKey));
 
   useEffect(() => {
     if (!sessionKey) return;
@@ -58,7 +67,9 @@ function NavbarContent() {
     return () => controller.abort();
   }, [sessionKey]);
 
-  const { href: accountHref } = getAccountNavigationDecision(isAuthorizedAdmin);
+  const accountDecision = getAccountNavigationDecision(isAuthorizedAdmin);
+  const accountHref = sessionError || !sessionUserId ? "/login" : accountDecision.href;
+  const accountLabel = sessionError ? "Sign in" : accountPending ? "Account" : sessionUserId ? accountDecision.label : "Sign in";
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -69,6 +80,20 @@ function NavbarContent() {
     }
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    function closeOutside(event: PointerEvent) {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target) && !menuButtonRef.current?.contains(event.target)) setMenuOpenedAtPath(null);
+    }
+    function closeOnDesktop(event: MediaQueryListEvent) {
+      if (event.matches) setMenuOpenedAtPath(null);
+    }
+    const desktop = window.matchMedia("(min-width: 80rem)");
+    desktop.addEventListener("change", closeOnDesktop);
+    document.addEventListener("pointerdown", closeOutside);
+    return () => { desktop.removeEventListener("change", closeOnDesktop); document.removeEventListener("pointerdown", closeOutside); };
   }, [mobileMenuOpen]);
 
   return (
@@ -82,17 +107,17 @@ function NavbarContent() {
           </span>
         </Link>
 
-        <nav aria-label="Main navigation" className="hidden items-center gap-5 xl:flex">
+        <nav aria-label="Main navigation" className="hidden items-center gap-1 xl:flex">
           {navigation.map((item) => {
             const active = isActive(pathname, item.href);
-            return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`rounded-sm text-[13px] font-medium transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-4 ${active ? "text-foreground" : "text-foreground-secondary"}`}>{item.label}</Link>;
+            return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={`inline-flex min-h-11 items-center rounded-full border px-3 text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${active ? "border-accent/40 bg-surface-secondary text-foreground" : "border-transparent text-foreground-secondary hover:bg-surface-secondary hover:text-foreground"}`}>{item.label}</Link>;
           })}
         </nav>
 
         <div className="hidden items-center gap-2 xl:flex">
           <ThemeToggle />
-          <Link href="/cart" aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-[13px] font-semibold text-foreground-secondary transition-colors hover:bg-surface-secondary hover:text-foreground"><ShoppingBag size={17} />Cart ({count})</Link>
-          <Link href={accountHref} className="inline-flex min-h-11 items-center rounded-full px-3 text-[13px] font-semibold text-foreground-secondary transition-colors hover:bg-surface-secondary hover:text-foreground">{isAuthorizedAdmin ? "Admin Panel" : "Account"}</Link>
+          <CartLink count={count} ready={ready} />
+          {accountPending ? <span role="status" className="inline-flex min-h-11 min-w-25 items-center justify-center rounded-full px-3 text-[13px] text-foreground-secondary" aria-label="Loading account">Account</span> : <Link href={accountHref} title={sessionError ? "Could not check your sign-in. Open the sign-in page." : undefined} className="inline-flex min-h-11 min-w-25 items-center justify-center rounded-full px-3 text-[13px] font-semibold text-foreground-secondary transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2">{accountLabel}</Link>}
           <Link href="/products" className="mt-button mt-button-primary group px-4 text-[13px] hover:shadow-[0_8px_22px_-10px_var(--accent)]">Explore kits<ArrowDownRight size={15} className="transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5" /></Link>
         </div>
 
@@ -104,15 +129,15 @@ function NavbarContent() {
         </div>
       </div>
 
-      {mobileMenuOpen && <nav id="mobile-navigation" aria-label="Mobile navigation" className="border-t border-border bg-background py-4 xl:hidden">
+      {mobileMenuOpen && <nav ref={menuRef} id="mobile-navigation" aria-label="Mobile navigation" className="max-h-[calc(100dvh-76px)] overflow-y-auto overscroll-contain border-t border-border bg-background py-4 shadow-[0_18px_30px_-26px_var(--foreground)] xl:hidden">
         <div className="mt-container flex flex-col gap-1">
           {navigation.map((item) => {
             const active = isActive(pathname, item.href);
-            return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} onClick={() => setMenuOpenedAtPath(null)} className={`rounded-xl px-3 py-3 text-sm font-medium transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent ${active ? "bg-surface-secondary text-foreground" : "text-foreground-secondary"}`}>{item.label}</Link>;
+            return <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} onClick={() => setMenuOpenedAtPath(null)} className={`inline-flex min-h-11 items-center rounded-xl border-l-2 px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent ${active ? "border-accent bg-surface-secondary text-foreground" : "border-transparent text-foreground-secondary"}`}>{item.label}</Link>;
           })}
           <div className="mt-2 grid grid-cols-2 gap-2 border-t border-border pt-3">
-            <Link href="/cart" aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`} onClick={() => setMenuOpenedAtPath(null)} className="rounded-xl px-2 py-3 text-center text-sm font-semibold text-foreground-secondary hover:bg-surface-secondary">Cart ({count})</Link>
-            <Link href={accountHref} onClick={() => setMenuOpenedAtPath(null)} className="rounded-xl px-3 py-3 text-center text-sm font-semibold text-foreground-secondary hover:bg-surface-secondary">{isAuthorizedAdmin ? "Admin Panel" : "Account"}</Link>
+            <CartLink count={count} ready={ready} mobile onClick={() => { setMenuOpenedAtPath(null); menuButtonRef.current?.focus(); }} />
+            {accountPending ? <span role="status" aria-label="Loading account" className="inline-flex min-h-11 items-center justify-center rounded-full border border-border text-sm text-foreground-secondary">Account</span> : <Link href={accountHref} title={sessionError ? "Could not check your sign-in. Open the sign-in page." : undefined} onClick={() => setMenuOpenedAtPath(null)} className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-3 text-sm font-semibold text-foreground-secondary hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-accent">{accountLabel}</Link>}
             <Link href="/products" onClick={() => setMenuOpenedAtPath(null)} className="mt-button mt-button-primary col-span-2">Explore kits <ArrowDownRight size={16} /></Link>
           </div>
         </div>

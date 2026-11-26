@@ -4,7 +4,8 @@ import { connectToDatabase } from "../src/lib/db/mongodb";
 import { UserModel, type User } from "../src/lib/db/models/user";
 import { AuditLogModel } from "../src/lib/db/models/reliability";
 import { createAdminBootstrap, type AdminBootstrapStore } from "../src/lib/auth/admin-bootstrap";
-import { isVerifiedOwnerGoogleIdentity, normalizeIdentityEmail, OWNER_ADMIN_EMAIL, readGoogleAccountIdentity } from "../src/lib/auth/google-identity";
+import { getAllowedAdminEmails, isVerifiedOwnerGoogleIdentity, normalizeIdentityEmail, readGoogleAccountIdentity } from "../src/lib/auth/google-identity";
+import { AdminDatabasePolicyError, assertApprovedAdminDatabase, assertNonProductionAdminEnvironment } from "./admin-database-policy";
 
 const CONFIRMATION_FLAG = "--confirm-promote-admin";
 const NON_PRODUCTION_FLAG = "--confirm-non-production";
@@ -12,20 +13,19 @@ const NON_PRODUCTION_FLAG = "--confirm-non-production";
 export class AdminBootstrapUsageError extends Error {}
 
 export function assertNonProductionBootstrap(nodeEnv: string | undefined): void {
-  if (nodeEnv === "production") {
-    throw new AdminBootstrapUsageError("Admin bootstrap is disabled when NODE_ENV is production.");
-  }
+  try { assertNonProductionAdminEnvironment(nodeEnv); }
+  catch { throw new AdminBootstrapUsageError("Admin bootstrap is disabled when NODE_ENV is production."); }
 }
 
-export function parseAdminBootstrapArgs(args: readonly string[]): { authUserId: string; confirmed: boolean } {
-  if (args.length !== 4 || args[0] !== "--user-id" || args[2] !== CONFIRMATION_FLAG || args[3] !== NON_PRODUCTION_FLAG) {
-    throw new AdminBootstrapUsageError("Usage: npm run admin:bootstrap -- --user-id <BETTER_AUTH_USER_ID> --confirm-promote-admin --confirm-non-production");
+export function parseAdminBootstrapArgs(args: readonly string[]): { authUserId: string; confirmed: boolean; database: string } {
+  if (args.length !== 6 || args[0] !== "--user-id" || args[2] !== "--confirm-database" || !/^[A-Za-z0-9_-]{1,64}$/.test(args[3] ?? "") || args[4] !== CONFIRMATION_FLAG || args[5] !== NON_PRODUCTION_FLAG) {
+    throw new AdminBootstrapUsageError("Usage: npm run admin:bootstrap -- --user-id <BETTER_AUTH_USER_ID> --confirm-database <non-production-db> --confirm-promote-admin --confirm-non-production");
   }
   const authUserId = args[1];
   if (!/^[a-f0-9]{24}$/i.test(authUserId)) {
     throw new AdminBootstrapUsageError("A valid exact Better Auth user ID is required.");
   }
-  return { authUserId, confirmed: true };
+  return { authUserId, confirmed: true, database: args[3] };
 }
 
 function createMongoAdminBootstrapStore(): AdminBootstrapStore {
@@ -44,11 +44,11 @@ function createMongoAdminBootstrapStore(): AdminBootstrapStore {
         await clientSession.withTransaction(async () => {
           result = null;
           const identity = await readGoogleAccountIdentity(authUserId, clientSession);
-          if (!identity || !isVerifiedOwnerGoogleIdentity(identity)) return;
+          if (!identity || !isVerifiedOwnerGoogleIdentity(identity, getAllowedAdminEmails())) return;
 
           const existing = await UserModel.findOne({ authUserId }).session(clientSession).lean().exec() as unknown as User | null;
           if (!existing || existing.status !== "active" ||
-              normalizeIdentityEmail(existing.emailNormalized) !== OWNER_ADMIN_EMAIL) return;
+              normalizeIdentityEmail(existing.emailNormalized) !== normalizeIdentityEmail(identity.email)) return;
           if (existing.role === "admin") {
             result = { profile: existing, promoted: false };
             return;
@@ -83,9 +83,15 @@ function createMongoAdminBootstrapStore(): AdminBootstrapStore {
 export async function runAdminBootstrap(args: readonly string[]): Promise<void> {
   const input = parseAdminBootstrapArgs(args);
   loadEnvConfig(process.cwd());
-  assertNonProductionBootstrap(process.env.NODE_ENV);
+  assertApprovedAdminDatabase({
+    nodeEnv: process.env.NODE_ENV,
+    confirmedDatabase: input.database,
+    configuredDatabase: process.env.MONGODB_DB_NAME,
+    mongoUri: process.env.MONGODB_URI,
+  });
   try {
     await connectToDatabase();
+    if (mongoose.connection.name !== input.database) throw new AdminBootstrapUsageError("Connected database does not match confirmation.");
     const bootstrap = createAdminBootstrap(createMongoAdminBootstrapStore());
     const result = await bootstrap(input);
     if (result.promoted) console.info("Admin access granted and audit event recorded.");
@@ -97,7 +103,7 @@ export async function runAdminBootstrap(args: readonly string[]): Promise<void> 
 
 if (require.main === module) {
   void runAdminBootstrap(process.argv.slice(2)).catch((error: unknown) => {
-    console.error(error instanceof AdminBootstrapUsageError
+    console.error(error instanceof AdminBootstrapUsageError || error instanceof AdminDatabasePolicyError
       ? error.message
       : "Admin bootstrap did not complete. Check database availability and the selected environment; internal details were not printed.");
     process.exitCode = 1;

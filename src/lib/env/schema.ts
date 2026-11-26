@@ -88,6 +88,7 @@ export const serverEnvSchema = z
     BETTER_AUTH_URL: optionalHttpUrl,
     GOOGLE_CLIENT_ID: nonEmptyString,
     GOOGLE_CLIENT_SECRET: nonEmptyString,
+    ADMIN_ALLOWED_EMAILS: z.string().trim().refine((value) => !value || value.split(",").every((part) => emailAddress.safeParse(part.trim()).success), "must contain only comma-separated email addresses").optional(),
 
     CASHFREE_CLIENT_ID: nonEmptyString,
     CASHFREE_CLIENT_SECRET: nonEmptyString,

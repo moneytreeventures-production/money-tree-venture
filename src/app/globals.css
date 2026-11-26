@@ -222,6 +222,28 @@ a.mt-button-primary {
 
   .mt-skeleton { background: var(--skeleton); }
   .mt-header { z-index: var(--layer-header); }
+  .mt-cart-count { animation: mt-cart-count-in var(--motion-quick) var(--motion-ease); }
+  .mt-growth-path { animation: mt-growth-draw 820ms var(--motion-ease) both; stroke-dasharray: 1; }
+}
+
+@keyframes mt-cart-count-in {
+  from { transform: scale(0.82); opacity: 0.5; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes mt-growth-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+.mt-review-marquee-track { animation: mt-review-marquee 44s linear infinite; }
+.mt-review-marquee-viewport:hover .mt-review-marquee-track,
+.mt-review-marquee-viewport:focus-within .mt-review-marquee-track { animation-play-state: paused !important; }
+.mt-review-marquee-card { width: min(85vw, 21.25rem); }
+@keyframes mt-review-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+@media (min-width: 1024px) {
+  .mt-review-marquee-card { width: calc((min(100vw - 6rem, 79rem) - 2rem) / 3); }
 }
 
 @media (min-width: 640px) {
@@ -233,6 +255,8 @@ a.mt-button-primary {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .mt-review-marquee-viewport { overflow-x: auto !important; }
+  .mt-review-marquee-track { animation: none !important; transform: none !important; }
   [data-mt-reveal] {
     opacity: 1 !important;
     transform: none !important;

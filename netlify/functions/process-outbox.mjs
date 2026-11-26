@@ -16,9 +16,13 @@ export default async function processOutbox() {
   });
   if (!response.ok) {
     let category = response.status >= 300 && response.status < 400 ? "redirect_blocked" : "unclassified_response";
-    if (response.status === 401 && response.headers.get("content-type")?.includes("application/json")) {
-      const body = await response.json().catch(() => null);
-      if (body?.error?.code === "UNAUTHORIZED" && body?.error?.message === "Worker authorization required.") category = "application_worker_auth_rejected";
+    if (response.status === 401) {
+      if (response.headers.has("www-authenticate")) category = "upstream_access_challenge";
+      else if (response.headers.get("content-type")?.includes("text/html")) category = "upstream_html_unauthorized";
+      else if (response.headers.get("content-type")?.includes("application/json")) {
+        const body = await response.json().catch(() => null);
+        if (body?.error?.code === "UNAUTHORIZED" && body?.error?.message === "Worker authorization required.") category = "application_worker_auth_rejected";
+      }
     }
     throw new Error(`Outbox worker returned HTTP ${response.status}; category=${category}.`);
   }

@@ -3,38 +3,54 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { CalendarDays, ChevronRight, FolderTree, Gift, LayoutDashboard, Menu, MessageSquare, Package, Star, X } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import ThemeToggle from "@/components/layout/theme-toggle";
 
-const links = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/products", label: "Products" },
-  { href: "/admin/categories", label: "Categories" },
-  { href: "/admin/bookings", label: "Bookings" },
-  { href: "/admin/reviews", label: "Reviews" },
-  { href: "/admin/support", label: "Support" },
-  { href: "/admin/coupons", label: "Coupons" },
-  { href: "/admin/email-testing", label: "Email testing" },
+const groups = [
+  { label: "Workspace", links: [{ href: "/admin", label: "Overview", icon: LayoutDashboard }] },
+  { label: "Catalogue", links: [
+    { href: "/admin/products", label: "Products", icon: Package },
+    { href: "/admin/categories", label: "Categories", icon: FolderTree },
+    { href: "/admin/coupons", label: "Coupons", icon: Gift },
+    { href: "/admin/reviews", label: "Reviews", icon: Star },
+  ] },
+  { label: "Operations", links: [
+    { href: "/admin/bookings", label: "Bookings", icon: CalendarDays },
+    { href: "/admin/support", label: "Support inbox", icon: MessageSquare },
+  ] },
 ] as const;
 
 function isActivePath(pathname: string, href: string): boolean {
   return href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function linkClass(active: boolean): string {
-  return `inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 ${
-    active ? "bg-surface-secondary text-foreground" : "text-foreground-secondary hover:bg-surface-secondary hover:text-foreground"
-  }`;
+function NavigationLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  return <>
+    {groups.map((group) => <div key={group.label} className="mb-5">
+      <p className="px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground-secondary">{group.label}</p>
+      <div className="mt-2 grid gap-1">{group.links.map(({ href, label, icon: Icon }) => {
+        const active = isActivePath(pathname, href);
+        return <Link key={href} href={href} onClick={onNavigate} aria-current={active ? "page" : undefined}
+          className={`flex min-h-11 items-center gap-3 rounded-xl border-l-[3px] px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${active ? "border-accent bg-surface-secondary text-foreground" : "border-transparent text-foreground-secondary hover:bg-surface-secondary hover:text-foreground"}`}>
+          <Icon size={18} aria-hidden="true" /><span className="flex-1">{label}</span>{active && <ChevronRight size={15} aria-hidden="true" />}
+        </Link>;
+      })}</div>
+    </div>)}
+    <div className="border-t border-border pt-4">
+      <Link href="/" onClick={onNavigate} className="flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-foreground-secondary hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Public site</Link>
+      <div className="mt-3 flex min-h-11 items-center justify-between gap-2 px-2"><ThemeToggle /><SignOutButton compact redirectTo="/" /></div>
+    </div>
+  </>;
 }
 
-export function AdminNavigation() {
+export function AdminNavigation({ variant }: { variant: "desktop" | "mobile" }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || variant !== "mobile") return;
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       setOpen(false);
@@ -42,42 +58,14 @@ export function AdminNavigation() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
+  }, [open, variant]);
 
-  return (
-    <>
-      <nav aria-label="Admin navigation" className="hidden items-center gap-1 xl:flex">
-        {links.map((link) => {
-          const active = isActivePath(pathname, link.href);
-          return <Link key={link.href} href={link.href} aria-current={active ? "page" : undefined} className={linkClass(active)}>{link.label}</Link>;
-        })}
-        <Link href="/" className={linkClass(false)}>Public site</Link>
-        <ThemeToggle />
-        <SignOutButton compact redirectTo="/" />
-      </nav>
+  if (variant === "desktop") return <nav aria-label="Admin navigation" className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border border-border bg-surface p-4 shadow-sm"><NavigationLinks pathname={pathname} /></nav>;
 
-      <div className="relative flex items-center gap-2 xl:hidden">
-        <ThemeToggle />
-        <button
-          ref={menuButton}
-          type="button"
-          aria-label={open ? "Close admin navigation" : "Open admin navigation"}
-          aria-expanded={open}
-          aria-controls="admin-mobile-navigation"
-          onClick={() => setOpen((value) => !value)}
-          className="inline-flex size-11 items-center justify-center rounded-full border border-border bg-surface text-foreground transition-colors hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
-        >
-          {open ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
-        </button>
-        <nav id="admin-mobile-navigation" aria-label="Admin navigation" hidden={!open} className="absolute right-0 top-full z-50 mt-3 grid w-[min(20rem,calc(100vw-2rem))] gap-1 rounded-2xl border border-border bg-surface p-3 shadow-xl">
-          {links.map((link) => {
-            const active = isActivePath(pathname, link.href);
-            return <Link key={link.href} href={link.href} aria-current={active ? "page" : undefined} onClick={() => setOpen(false)} className={`${linkClass(active)} w-full justify-start px-4`}>{link.label}</Link>;
-          })}
-          <Link href="/" onClick={() => setOpen(false)} className={`${linkClass(false)} w-full justify-start px-4`}>Public site</Link>
-          <div className="mt-2 flex justify-end border-t border-border pt-3"><SignOutButton compact redirectTo="/" /></div>
-        </nav>
-      </div>
-    </>
-  );
+  return <div className="relative xl:hidden">
+    <button ref={menuButton} type="button" aria-label={open ? "Close admin navigation" : "Open admin navigation"} aria-expanded={open} aria-controls="admin-mobile-navigation" onClick={() => setOpen((value) => !value)} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-surface px-4 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+      {open ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />} Menu
+    </button>
+    {open && <nav id="admin-mobile-navigation" aria-label="Admin navigation" className="absolute right-0 top-full z-50 mt-3 max-h-[calc(100dvh-6rem)] w-[min(21rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-border bg-surface p-4 shadow-xl"><NavigationLinks pathname={pathname} onNavigate={() => setOpen(false)} /></nav>}
+  </div>;
 }

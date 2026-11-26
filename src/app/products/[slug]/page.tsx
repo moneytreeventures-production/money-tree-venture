@@ -13,6 +13,7 @@ import { getPublicProductPageData } from "@/lib/catalog/product-service";
 import { productSlugSchema } from "@/lib/catalog/product-validation";
 import { NotFoundError, ValidationError } from "@/lib/errors/app-error";
 import { formatINR } from "@/lib/format/currency";
+import { AmbientGlow } from "@/components/ui/ambient-glow";
 
 type PageProps = { params: Promise<{ slug: string }> };
 const getPageData = cache((slug: string) => getPublicProductPageData(slug));
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default function ProductDetailPage({ params }: PageProps) {
-  return <><Navbar /><main className="flex-1"><Suspense fallback={<div className="mx-auto flex min-h-[60vh] max-w-6xl items-center justify-center px-5 text-sm text-foreground-secondary" role="status">Loading product details...</div>}><ProductContent params={params} /></Suspense></main><Footer /></>;
+  return <><Navbar /><main className="relative flex-1 overflow-hidden"><AmbientGlow /><div className="relative"><Suspense fallback={<div className="mx-auto flex min-h-[60vh] max-w-6xl items-center justify-center px-5 text-sm text-foreground-secondary" role="status">Loading product details...</div>}><ProductContent params={params} /></Suspense></div></main><Footer /></>;
 }
 
 async function ProductContent({ params }: PageProps) {

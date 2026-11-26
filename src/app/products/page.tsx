@@ -4,6 +4,7 @@ import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import ProductCatalog from "@/components/catalog/product-catalog";
 import { CatalogueSkeleton } from "@/components/ui/skeleton";
+import { AmbientGlow } from "@/components/ui/ambient-glow";
 
 export const metadata: Metadata = {
   title: "Digital products",
@@ -12,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function ProductsPage() {
-  return <><Navbar /><main className="flex-1"><Suspense fallback={<CatalogueSkeleton />}><ProductCatalog /></Suspense></main><Footer /></>;
+  return <><Navbar /><main className="relative flex-1 overflow-hidden"><AmbientGlow /><div className="relative"><Suspense fallback={<CatalogueSkeleton />}><ProductCatalog /></Suspense></div></main><Footer /></>;
 }

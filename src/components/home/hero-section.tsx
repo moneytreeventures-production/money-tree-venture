@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { ArrowDown, ArrowRight, Check, Sparkles } from "lucide-react";
 import Reveal from "@/components/ui/reveal";
-import HeroDepth from "./hero-depth";
+import GrowthEcosystem from "./growth-ecosystem";
 
 export default function HeroSection() {
   return <section className="relative overflow-hidden">
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_77%_30%,rgba(249,115,22,0.10),transparent_34%),linear-gradient(to_right,transparent_0,transparent_calc(100%-1px),var(--border)_calc(100%-1px))] bg-[length:auto,8.333%_100%] opacity-60" />
     <div className="mt-container relative grid grid-cols-1 items-center gap-12 pb-16 pt-12 sm:pb-20 sm:pt-20 lg:min-h-[690px] lg:grid-cols-[0.95fr_1.05fr] lg:gap-8 lg:py-20">
       <Reveal className="relative z-10 min-w-0 max-w-[610px]">
         <div className="mb-7 inline-flex max-w-full flex-wrap items-center gap-2.5 rounded-full border border-border bg-surface/80 px-3.5 py-2 text-[10px] font-semibold tracking-[0.06em] text-foreground-secondary shadow-sm shadow-primary/5 sm:text-[11px] sm:tracking-[0.08em]">
@@ -29,7 +28,7 @@ export default function HeroSection() {
         </div>
       </Reveal>
 
-      <HeroDepth />
+      <div className="relative mx-auto w-full min-w-0 max-w-[640px] lg:ml-auto"><GrowthEcosystem /></div>
     </div>
     <div className="border-y border-border bg-surface/70">
       <div className="mt-container flex flex-wrap items-center justify-between gap-x-6 gap-y-2 py-4 text-[10px] font-semibold tracking-[0.13em] text-foreground-secondary sm:text-[11px]">

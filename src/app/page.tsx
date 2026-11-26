@@ -9,10 +9,13 @@ import { FeaturedProductsSkeleton } from "@/components/ui/skeleton";
 import HowItWorks from "@/components/home/how-it-works";
 import TrustSection from "@/components/home/trust-section";
 import HomeGuidance from "@/components/home/home-guidance";
+import HomeScrollGlow from "@/components/home/home-scroll-glow";
 
 export default function Home() {
   return (
-    <>
+    <div className="mt-homepage relative isolate flex min-h-screen flex-col">
+      <HomeScrollGlow />
+      <div className="relative z-10 flex min-h-screen flex-col">
       <Navbar />
 
       <main className="flex-1">
@@ -25,6 +28,7 @@ export default function Home() {
       </main>
 
       <Footer />
-    </>
+      </div>
+    </div>
   );
 }

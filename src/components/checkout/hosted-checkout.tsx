@@ -88,7 +88,7 @@ export function HostedCheckout({ orderId, orderReference, totalPaise }: HostedCh
         <button
           type="submit"
           disabled={busy || !sdkReady}
-          className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-accent px-6 py-3 text-sm font-semibold text-foreground transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {busy ? "Connecting to Cashfree securely…" : sdkReady ? "Pay with Cashfree" : "Loading secure checkout…"}
         </button>

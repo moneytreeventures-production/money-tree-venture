@@ -11,7 +11,7 @@ export default function AdminHomePage() {
       <header className="max-w-3xl">
         <p className="text-[11px] font-bold tracking-[0.18em] text-accent-foreground">ADMINISTRATION</p>
         <h1 className="mt-3 text-4xl font-semibold tracking-[-0.055em] text-foreground sm:text-5xl">Workspace overview</h1>
-        <p className="mt-4 text-base leading-7 text-foreground-secondary">Live catalogue and operations totals from the connected database. Counts are snapshots when this page loads.</p>
+        <p className="mt-4 text-base leading-7 text-foreground-secondary">A snapshot of your catalogue and daily operations.</p>
       </header>
       <Suspense fallback={<DashboardOverviewFallback />}>
         <DashboardOverview />
@@ -26,8 +26,8 @@ async function DashboardOverview() {
   const metrics = [
     { label: "Products", value: counts.products, detail: `${counts.publishedProducts} published · ${counts.draftProducts} drafts · ${counts.archivedProducts} archived`, href: "/admin/products" },
     { label: "Categories", value: counts.categories, detail: "Organize the public catalogue", href: "/admin/categories" },
-    { label: "Orders", value: counts.orders, detail: "Count only; no order-management page is available" },
-    { label: "Customers", value: counts.customers, detail: "Active and blocked customer profiles; no management page is available" },
+    { label: "Orders", value: counts.orders, detail: "Orders placed through checkout" },
+    { label: "Customers", value: counts.customers, detail: "Active and blocked customer profiles" },
     { label: "Bookings to schedule", value: counts.pendingBookings, detail: "Call Guidance bookings awaiting scheduling", href: "/admin/bookings" },
   ];
 

@@ -88,6 +88,11 @@ export function transactionalRecipientAllowed(input: { gatewayEnvironment?: stri
   return (input.allowed ?? "").split(",").some((value) => value.trim().toLowerCase() === input.recipient.trim().toLowerCase());
 }
 
+/** Only the worker holding the current attempt may finish or reschedule it. */
+export function outboxClaimWriteFilter(event: Pick<OutboxEvent, "attemptCount"> & { _id: Types.ObjectId }) {
+  return { _id: event._id, status: "processing" as const, attemptCount: event.attemptCount };
+}
+
 async function sendOutboxEmail(event: OutboxEvent & { _id: Types.ObjectId }): Promise<"sent" | "suppressed"> {
   const payload = event.payload;
   const orderId = payload.orderId;
@@ -166,16 +171,16 @@ export async function processEmailOutboxBatch(limit = 10, createdAfter?: Date): 
     try {
       const outcome = await sendOutboxEmail(claimed);
       if (outcome === "suppressed") {
-        await OutboxEventModel.updateOne({ _id: claimed._id, status: "processing" }, { $set: { status: "dead_letter", processedAt: new Date(), lastErrorCode: "EMAIL_SUPPRESSED", lastErrorSummary: "Email was intentionally suppressed." } });
-        counters.suppressed += 1;
+        const result = await OutboxEventModel.updateOne(outboxClaimWriteFilter(claimed), { $set: { status: "dead_letter", processedAt: new Date(), lastErrorCode: "EMAIL_SUPPRESSED", lastErrorSummary: "Email was intentionally suppressed." } });
+        if (result.matchedCount) counters.suppressed += 1;
         continue;
       }
-      await OutboxEventModel.updateOne({ _id: claimed._id, status: "processing" }, { $set: { status: "sent", processedAt: new Date(), lastErrorCode: null, lastErrorSummary: null } });
-      counters.sent += 1;
+      const result = await OutboxEventModel.updateOne(outboxClaimWriteFilter(claimed), { $set: { status: "sent", processedAt: new Date(), lastErrorCode: null, lastErrorSummary: null } });
+      if (result.matchedCount) counters.sent += 1;
     } catch (error) {
       const dead = claimed.attemptCount >= maxAttempts;
       const delay = outboxRetryDelayMs(claimed.attemptCount);
-      await OutboxEventModel.updateOne({ _id: claimed._id, status: "processing" }, {
+      const result = await OutboxEventModel.updateOne(outboxClaimWriteFilter(claimed), {
         $set: {
           status: dead ? "dead_letter" : "retry",
           nextAttemptAt: new Date(Date.now() + delay),
@@ -183,7 +188,7 @@ export async function processEmailOutboxBatch(limit = 10, createdAfter?: Date): 
           lastErrorSummary: "Transactional email delivery failed.",
         },
       });
-      counters[dead ? "deadLetter" : "retried"] += 1;
+      if (result.matchedCount) counters[dead ? "deadLetter" : "retried"] += 1;
     }
   }
   return counters;

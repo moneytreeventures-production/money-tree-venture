@@ -23,7 +23,7 @@ function AccountLinks({ current }: { current: AccountSection }) {
 export function AccountShell({ title, description, current, children }: { title: string; description: string; current: AccountSection; children: React.ReactNode }) {
   return <main className="relative mx-auto w-full min-w-0 max-w-[94rem] px-4 py-8 sm:px-8 sm:py-10">
     <AmbientGlow />
-    <div className="relative flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5"><Link href="/" className="text-xs font-bold tracking-[0.14em] text-accent-foreground">MONEYTREEVENTURES</Link><SignOutButton redirectTo="/" /></div>
+    <div className="relative flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5"><Link href="/" className="text-xs font-bold tracking-[0.14em] text-accent-foreground">MONEY TREE VENTURE</Link><SignOutButton redirectTo="/" /></div>
     <div className="relative mt-7 flex min-w-0 gap-6">
       <aside className="hidden w-60 shrink-0 lg:block"><div className="sticky top-5 rounded-2xl border border-border bg-surface p-4 shadow-sm"><p className="mb-4 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground-secondary">Your account</p><AccountLinks current={current} /></div></aside>
       <div className="min-w-0 flex-1">

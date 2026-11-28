@@ -30,7 +30,7 @@ async function AdminGate({ children }: Readonly<{ children: ReactNode }>) {
       <header className="relative border-b border-border bg-surface">
         <div className="mx-auto flex min-h-[68px] max-w-[94rem] items-center justify-between gap-3 px-4 sm:min-h-[76px] sm:gap-6 sm:px-8">
           <div>
-            <Link href="/admin" className="text-[11px] font-bold tracking-[0.09em] text-foreground sm:text-sm sm:tracking-[0.12em]">MONEYTREE<span className="text-accent-foreground">VENTURES</span></Link>
+            <Link href="/admin" className="text-[11px] font-bold tracking-[0.09em] text-foreground sm:text-sm sm:tracking-[0.12em]">MONEY TREE <span className="text-accent-foreground">VENTURE</span></Link>
             <p className="mt-1 text-[10px] text-foreground-secondary sm:text-xs">Admin workspace</p>
           </div>
           <span className="hidden rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground-secondary xl:inline-flex">Administrator workspace</span>

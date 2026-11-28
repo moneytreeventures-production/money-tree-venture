@@ -93,6 +93,7 @@ export const serverEnvSchema = z
     CASHFREE_CLIENT_ID: nonEmptyString,
     CASHFREE_CLIENT_SECRET: nonEmptyString,
     CASHFREE_ENVIRONMENT: z.enum(["sandbox", "production"]).optional(),
+    PAYMENT_COLLECTION_MODE: z.enum(["disabled", "sandbox", "live"]).optional(),
     CASHFREE_API_VERSION: apiVersion,
     CASHFREE_WEBHOOK_VERSION: apiVersion,
     CASHFREE_RETURN_URL_BASE: optionalHttpUrl,

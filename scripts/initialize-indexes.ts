@@ -318,6 +318,12 @@ export function assertConfirmedDatabaseName(actualDatabaseName: string, confirme
   }
 }
 
+export function assertNoLegacyProductionWrites(databaseName: string, readOnly: boolean): void {
+  if (databaseName === "moneytreeventure-prod" && !readOnly) {
+    throw new IndexInitializationUsageError("Production index writes require the dedicated production migration command; no connection was attempted.");
+  }
+}
+
 export function shouldDropLegacyRefundIndex(indexExists: boolean, dropWasExplicitlyRequested: boolean): boolean {
   if (!indexExists) return false;
   if (!dropWasExplicitlyRequested) {
@@ -394,6 +400,7 @@ export async function runIndexInitialization(args: readonly string[]): Promise<v
   try { uriDatabase = decodeURIComponent(new URL(configuredUri).pathname.slice(1)); }
   catch { throw new IndexInitializationUsageError("MongoDB URI is invalid. No database connection was attempted."); }
   if (uriDatabase && uriDatabase !== input.databaseName) throw new IndexInitializationUsageError("MongoDB URI database differs from the confirmed target. No connection was attempted.");
+  assertNoLegacyProductionWrites(input.databaseName, mode === "--inspect" || mode === "--verify" || rateMode === "--rate-preflight");
   if (mode === "--init" && input.databaseName === "moneytreeventures") throw new IndexInitializationUsageError("Protected database initialization requires a separate approved workflow.");
   if (mode === "--bootstrap" && input.databaseName === "moneytreeventures") throw new IndexInitializationUsageError("Bootstrap is disabled for the protected production database.");
   if (rateMode === "--rate-init" && input.databaseName === "moneytreeventures" && (process.env.EMAIL_TEST_DATABASE_ROLE !== "local-development-only" || process.env.EMAIL_TEST_DATABASE_NAME !== input.databaseName || process.env.NETLIFY === "true")) throw new IndexInitializationUsageError("Existing development database index setup requires a local-only role attestation; no index was changed.");

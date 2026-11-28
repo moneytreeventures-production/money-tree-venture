@@ -10,6 +10,7 @@ import { readJsonBody } from "../catalog/route-utils";
 import { assertMutationOrigin } from "../http/mutation-origin";
 import { createOrder, getCustomerOrder, listCustomerOrders, previewCheckoutOwnership, setCustomerOrderArchived } from "./order-service";
 import { z } from "zod";
+import { requirePaymentCollection } from "../payments/payment-activation";
 
 type OrderContext = { params: Promise<{ id: string }> };
 
@@ -55,6 +56,7 @@ export function createOrderRouteHandlers(options: {
     try {
       assertMutationOrigin(request);
       const customer = await authorize();
+      requirePaymentCollection();
       const key = request.headers.get("idempotency-key") ?? "";
       const data = await services.createOrder(await readJsonBody(request), {
         id: profileId(customer), name: customer.name, email: customer.email,

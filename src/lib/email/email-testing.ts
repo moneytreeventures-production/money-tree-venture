@@ -32,9 +32,9 @@ export function emailTestPolicy(input: { enabled?: string; appUrl?: string; auth
 
 export function buildEmailTestMessage(kind: "basic" | "purchase", reference: string, accountUrl: string): ResendMessage {
   if (kind === "basic") return {
-    to: "", subject: `TEST EMAIL - MoneyTreeVentures staging - ${reference}`,
-    text: `MoneyTreeVentures staging test email. Reference: ${reference}. No purchase or payment was made.`,
-    html: `<p>MoneyTreeVentures staging test email.</p><p>Reference: ${reference}. No purchase or payment was made.</p>`,
+    to: "", subject: `TEST EMAIL - Money Tree Venture staging - ${reference}`,
+    text: `Money Tree Venture staging test email. Reference: ${reference}. No purchase or payment was made.`,
+    html: `<p>Money Tree Venture staging test email.</p><p>Reference: ${reference}. No purchase or payment was made.</p>`,
   };
   const message = buildPurchaseConfirmation({ name: "Test Customer", orderReference: `TEST-${reference}`, dashboardUrl: accountUrl, lines: [{ productName: "Sample PDF (test only)", quantity: 1, lineTotalPaise: 19900 }], totalPaise: 19900 });
   return { ...message, subject: `TEST EMAIL - ${message.subject}`, text: `STAGING TEMPLATE TEST. No purchase was made.\n\n${message.text}`, html: `<p><strong>STAGING TEMPLATE TEST. No purchase was made.</strong></p>${message.html}` };

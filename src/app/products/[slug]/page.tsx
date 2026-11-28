@@ -14,6 +14,7 @@ import { productSlugSchema } from "@/lib/catalog/product-validation";
 import { NotFoundError, ValidationError } from "@/lib/errors/app-error";
 import { formatINR } from "@/lib/format/currency";
 import { AmbientGlow } from "@/components/ui/ambient-glow";
+import { publicSiteOrigin } from "@/lib/seo/site-url";
 
 type PageProps = { params: Promise<{ slug: string }> };
 const getPageData = cache((slug: string) => getPublicProductPageData(slug));
@@ -42,7 +43,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: product.seo?.title || product.name,
       description: product.seo?.description || product.shortDescription,
       alternates: { canonical: `/products/${encodeURIComponent(product.slug)}` },
-      openGraph: { title: product.seo?.title || product.name, description: product.seo?.description || product.shortDescription, ...(thumbnail ? { images: [thumbnail] } : {}) },
+      openGraph: { title: product.seo?.title || product.name, description: product.seo?.description || product.shortDescription, url: `/products/${encodeURIComponent(product.slug)}`, images: [thumbnail || "/opengraph-image.png"] },
+      twitter: { card: "summary_large_image", title: product.seo?.title || product.name, description: product.seo?.description || product.shortDescription, images: [thumbnail || "/opengraph-image.png"] },
     };
   } catch {
     return { title: "Product not found", robots: { index: false, follow: false } };
@@ -62,8 +64,18 @@ async function ProductContent({ params }: PageProps) {
   catch (error) { if (error instanceof NotFoundError || error instanceof ValidationError) notFound(); throw error; }
   const { product, categories, includedProducts } = data;
   const bundleKind = product.bundleKind === "starter_kit" ? "PDF starter kit" : "PDF bundle";
+  const origin = publicSiteOrigin();
+  const productUrl = `${origin}/products/${encodeURIComponent(product.slug)}`;
+  const structuredData = origin ? JSON.stringify({ "@context": "https://schema.org", "@graph": [
+    { "@type": "Product", name: product.name, description: product.shortDescription, url: productUrl, ...(safeImageSource(product.imageRefs?.[0]) ? { image: safeImageSource(product.imageRefs[0]) } : {}) },
+    { "@type": "BreadcrumbList", itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: origin },
+      { "@type": "ListItem", position: 2, name: "Products", item: `${origin}/products` },
+      { "@type": "ListItem", position: 3, name: product.name, item: productUrl },
+    ] },
+  ] }).replace(/</g, "\\u003c") : null;
 
-  return <><article className="mt-container max-w-6xl py-10 sm:py-14 lg:py-16">
+  return <>{structuredData && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData }} />}<article className="mt-container max-w-6xl py-10 sm:py-14 lg:py-16">
       <Link href="/products" className="mt-button mt-button-outline min-h-10 px-4 text-foreground-secondary">← Back to products</Link>
     <div className="mt-7 grid items-start gap-9 lg:grid-cols-[1.05fr_.95fr] lg:gap-14">
       <ProductMainMedia name={product.name} imageRefs={product.imageRefs} promotionalVideoUrl={product.promotionalVideoUrl} videoUnavailableMessage="The video could not be played. The product thumbnail is shown instead." previewUnavailableMessage="Product preview is currently unavailable." />

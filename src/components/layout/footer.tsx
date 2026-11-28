@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowUpRight, Sprout } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { BrandLogo } from "./brand-logo";
 
 const exploreLinks = [
   ["Home", "/"],
@@ -34,9 +35,9 @@ export default function Footer() {
     <div className="mt-container pb-7 pt-12 sm:pt-14">
       <div className="grid gap-10 border-b border-border pb-10 sm:grid-cols-2 sm:gap-12 xl:grid-cols-[1.5fr_.8fr_.9fr_1.2fr] xl:pb-12">
         <div>
-          <Link href="/" aria-label="MoneyTreeVentures — homepage" className="inline-flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-background"><Sprout size={21} strokeWidth={1.8} /></span>
-            <span className="flex flex-col leading-none"><span className="text-base font-bold tracking-tight text-foreground">MoneyTree<span className="text-accent-foreground">Ventures</span></span><span className="mt-1.5 text-[9px] font-semibold tracking-[0.08em] text-foreground-secondary">LEARN MORE · EXPLORE MORE · GROW MORE</span></span>
+          <Link href="/" aria-label="Money Tree Venture — homepage" className="inline-flex items-center gap-3">
+            <BrandLogo />
+            <span className="flex flex-col leading-none"><span className="text-base font-bold tracking-tight text-foreground">Money Tree <span className="text-accent-foreground">Venture</span></span><span className="mt-1.5 text-[9px] font-semibold tracking-[0.08em] text-foreground-secondary">LEARN MORE · EXPLORE MORE · GROW MORE</span></span>
           </Link>
           <p className="mt-5 max-w-md text-sm leading-7 text-foreground-secondary">Learn More. Explore More. Grow More. Digital resources and separate online consultation services.</p>
         </div>
@@ -45,7 +46,7 @@ export default function Footer() {
         <LinkList title="Policies" links={legalLinks} />
       </div>
       <div className="flex flex-col justify-between gap-3 pt-6 text-[11px] text-foreground-secondary sm:flex-row sm:items-center">
-        <p>© MoneyTreeVentures. All rights reserved.</p>
+        <p>© Money Tree Venture. All rights reserved.</p>
         <p>Learn More. Explore More. Grow More.</p>
       </div>
     </div>

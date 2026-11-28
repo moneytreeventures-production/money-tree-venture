@@ -121,7 +121,7 @@ export default function CheckoutStart() {
 
   return (
     <main className="mx-auto w-full min-w-0 max-w-3xl px-4 py-10 sm:px-8 sm:py-16">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-foreground">MoneyTreeVentures · Secure checkout</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-foreground">Money Tree Venture · Secure checkout</p>
       <h1 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Prepare your order.</h1>
       <p className="mt-3 text-sm leading-7 text-foreground-secondary">Your final price, availability and any coupon discount will be confirmed here. Cashfree Hosted Checkout opens in the next step.</p>
       <nav aria-label="Checkout navigation" className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-accent-foreground">

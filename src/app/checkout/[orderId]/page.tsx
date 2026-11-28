@@ -44,7 +44,7 @@ async function CheckoutContent({ params }: CheckoutPageProps) {
     typeof order.totalPaise === "number" && typeof order.id === "string" && typeof order.orderReference === "string";
   return (
     <main className="mx-auto w-full min-w-0 max-w-3xl px-4 py-10 sm:px-8 sm:py-16">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-foreground">MoneyTreeVentures · Checkout</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-foreground">Money Tree Venture · Checkout</p>
       <h1 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Order details</h1>
       <ul className="mt-8 divide-y divide-border border-y border-border">
         {(order.lines ?? []).map((line, index) => (

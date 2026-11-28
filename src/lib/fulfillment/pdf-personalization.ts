@@ -19,7 +19,7 @@ export class UnsupportedWatermarkCharactersError extends Error {
 }
 
 const PERSONAL_USE_NOTICE = "Personal use only. Copying, sharing, resale, or redistribution is not permitted.";
-const COPYRIGHT_NOTICE = "© MoneyTreeVentures. Buyer-specific copy.";
+const COPYRIGHT_NOTICE = "© Money Tree Venture. Buyer-specific copy.";
 
 function printableText(value: string): string {
   const normalized = value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").trim();

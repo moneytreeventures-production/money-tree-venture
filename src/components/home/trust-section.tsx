@@ -13,7 +13,7 @@ export default function TrustSection() {
           <div aria-hidden="true" className="absolute -right-16 -top-16 size-64 rounded-full border border-white/10" />
           <div aria-hidden="true" className="absolute -right-6 -top-6 size-44 rounded-full border border-white/10" />
           <div className="relative">
-            <p className="text-[10px] font-bold tracking-[0.2em] text-orange-300">MONEYTREEVENTURES</p>
+            <p className="text-[10px] font-bold tracking-[0.2em] text-orange-300">MONEY TREE VENTURE</p>
             <h2 className="mt-6 max-w-md text-3xl font-semibold leading-[1.04] tracking-[-0.05em] sm:text-4xl lg:text-[3.35rem]">Start growing with clarity.</h2>
             <p className="mt-5 max-w-md text-sm leading-7 text-slate-300">We focus on making useful digital learning resources simple and approachable so you can make informed choices.</p>
             <div className="mt-9 flex items-center gap-3 border-t border-white/15 pt-5 text-xs font-medium text-slate-300">

@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import { publicPageMetadata } from "@/lib/seo/page-metadata";
 import Link from "next/link";
 import { PublicInfoPage } from "@/components/pages/public-info-page";
 
-export const metadata: Metadata = { title: "Billing Information", description: "Draft billing information; tax treatment and commercial receipts require owner and tax-adviser review.", alternates: { canonical: "/billing-information" } };
+export const metadata: Metadata = publicPageMetadata("Billing Information", "How prices, orders and payment status are presented.", "/billing-information");
 
 export default function BillingInformationPage() {
-  return <PublicInfoPage eyebrow="Billing · Draft" title="Billing Information" intro="This draft explains checkout and billing information. The tax treatment is not final and must be reconciled before production billing is approved." draft sections={[
-    { title: "Business and tax status", content: <><p>Money Tree Venture has stated that it is currently not registered under GST, does not charge GST separately on purchases, and does not issue GST tax invoices. This statement has not been independently verified and is not a substitute for tax advice.</p><p className="mt-3"><strong className="text-foreground">Billing status:</strong> new checkout orders use the displayed price without a tax adjustment. Historical order snapshots may contain a non-zero included-tax component; their original amounts remain unchanged. The tax treatment of those historical records and the seller’s obligations still require qualified review before production launch.</p></> },
+  return <PublicInfoPage eyebrow="Billing" title="Billing Information" intro="See how product prices, discounts and order totals appear in your account." sections={[
+    { title: "Prices and totals", content: <p>Published product prices are shown in Indian rupees. At checkout, eligible coupon discounts are applied before the final payable amount is shown. The application does not add a separate tax amount to new checkout totals. Previous orders retain their recorded totals.</p> },
     { title: "Prices, payment and order records", content: <p>Products and supported online services are sold through this website. Prices are displayed in INR. The payable amount is shown in the authenticated order summary. Paid digital access is provided only after payment verification. You can review your orders in <Link className="underline" href="/account/orders">Order History</Link>.</p> },
-    { title: "Commercial receipts and tax invoices", content: <p>No GST tax invoice is issued. The account currently provides an authenticated order summary, not a separately generated commercial receipt. A non-GST receipt is not being issued while seller identification and the tax snapshots remain unresolved. Do not treat an order summary as a GST invoice or as proof that the tax classification has been approved.</p> },
+    { title: "Order records", content: <p>Your account provides an authenticated order summary and payment status. The website does not currently offer a separate invoice download. Contact support with your order reference if you need billing assistance.</p> },
     { title: "Payment confirmations and billing help", content: <p>Payment confirmations may be sent through configured transactional communication channels once those channels are operational; email delivery is not guaranteed and is not the delivery mechanism for protected PDFs. For billing help, contact <a className="underline" href="mailto:help@moneytreeventure.com">help@moneytreeventure.com</a> or use the <Link className="underline" href="/contact#support-form">support form</Link>. Include the order reference, but never send payment credentials.</p> },
-    { title: "Tax review before production", content: <p>The registration position, classification of each offering, applicable tax and price presentation remain subject to qualified Indian tax review. Historical order snapshots remain unchanged and require separate review; no GSTIN, GST invoice number or tax amount is represented here without verification.</p> },
+    { title: "Online payment availability", content: <p>Online purchases will be available when payment collection is activated. Until then, you may browse products and prices without creating a payable order.</p> },
   ]} />;
 }

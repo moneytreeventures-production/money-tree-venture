@@ -13,7 +13,7 @@ export default function AdminLoginPage() {
       <Navbar />
       <main className="flex flex-1 items-center justify-center px-5 py-16 sm:px-8 sm:py-24">
         <section className="w-full max-w-[520px] rounded-[1.75rem] border border-border bg-surface p-6 shadow-[0_28px_80px_-48px_rgba(15,30,54,0.35)] sm:p-10">
-          <Link href="/" className="text-xs font-semibold tracking-[0.16em] text-accent-foreground">MONEYTREEVENTURES</Link>
+          <Link href="/" className="text-xs font-semibold tracking-[0.16em] text-accent-foreground">MONEY TREE VENTURE</Link>
           <p className="mt-8 text-[11px] font-bold tracking-[0.18em] text-foreground-secondary">RESTRICTED ACCESS</p>
           <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-[-0.05em] text-foreground sm:text-4xl">Admin Login</h1>
           <p className="mt-4 text-sm leading-7 text-foreground-secondary sm:text-base">

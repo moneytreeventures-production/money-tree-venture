@@ -46,8 +46,8 @@ export function buildPurchaseConfirmation(input: { name: string; orderReference:
   const total = formatINR(input.totalPaise);
   return {
     to: "", subject: `Payment confirmed - ${input.orderReference}`,
-    text: `Hello ${input.name},\n\nPayment for order ${input.orderReference} is confirmed.\n\nItems:\n${linesText}\n\nTotal paid: ${total}\nView your order and access details in your account: ${input.dashboardUrl}\n\nMoneyTreeVentures`,
-    html: `<p>Hello ${name},</p><p>Payment for order <strong>${ref}</strong> is confirmed.</p><ul>${linesHtml}</ul><p>Total paid: <strong>${escapeHtml(total)}</strong></p><p><a href="${link}">View your order and access details</a></p><p>MoneyTreeVentures</p>`,
+    text: `Hello ${input.name},\n\nPayment for order ${input.orderReference} is confirmed.\n\nItems:\n${linesText}\n\nTotal paid: ${total}\nView your order and access details in your account: ${input.dashboardUrl}\n\nMoney Tree Venture`,
+    html: `<p>Hello ${name},</p><p>Payment for order <strong>${ref}</strong> is confirmed.</p><ul>${linesHtml}</ul><p>Total paid: <strong>${escapeHtml(total)}</strong></p><p><a href="${link}">View your order and access details</a></p><p>Money Tree Venture</p>`,
   };
 }
 export function buildBookingMessage(input: { name: string; reference: string; status: string; instructions: string; dashboardUrl: string }): ResendMessage {
@@ -65,8 +65,8 @@ export function buildBookingMessage(input: { name: string; reference: string; st
   const link = escapeHtml(input.dashboardUrl);
   return {
     to: "", subject: `Consultation booking update - ${input.reference}`,
-    text: `Hello ${input.name},\n\n${description}\nBooking reference: ${input.reference}\n${input.instructions}\n\n${input.dashboardUrl}\nMoneyTreeVentures`,
-    html: `<p>Hello ${name},</p><p>${escapeHtml(description)}</p><p>Booking reference: <strong>${reference}</strong></p>${instructions ? `<p>${instructions}</p>` : ""}<p><a href="${link}">View booking details</a></p><p>MoneyTreeVentures</p>`,
+    text: `Hello ${input.name},\n\n${description}\nBooking reference: ${input.reference}\n${input.instructions}\n\n${input.dashboardUrl}\nMoney Tree Venture`,
+    html: `<p>Hello ${name},</p><p>${escapeHtml(description)}</p><p>Booking reference: <strong>${reference}</strong></p>${instructions ? `<p>${instructions}</p>` : ""}<p><a href="${link}">View booking details</a></p><p>Money Tree Venture</p>`,
   };
 }
 export function buildRefundConfirmation(input: { name: string; orderReference: string; amountPaise: number; dashboardUrl: string }): ResendMessage {
@@ -77,8 +77,8 @@ export function buildRefundConfirmation(input: { name: string; orderReference: s
   const link = escapeHtml(input.dashboardUrl);
   return {
     to: "", subject: `Refund confirmed - ${input.orderReference}`,
-    text: `Hello ${input.name},\n\nCashfree has confirmed a refund of ${amount} for order ${input.orderReference}. The credit may take some time to appear in your bank account or payment method. View order details in your account: ${input.dashboardUrl}\n\nMoneyTreeVentures`,
-    html: `<p>Hello ${name},</p><p>Cashfree has confirmed a refund of <strong>${safeAmount}</strong> for order <strong>${reference}</strong>. The credit may take some time to appear in your bank account or payment method.</p><p><a href="${link}">View order details</a></p><p>MoneyTreeVentures</p>`,
+    text: `Hello ${input.name},\n\nCashfree has confirmed a refund of ${amount} for order ${input.orderReference}. The credit may take some time to appear in your bank account or payment method. View order details in your account: ${input.dashboardUrl}\n\nMoney Tree Venture`,
+    html: `<p>Hello ${name},</p><p>Cashfree has confirmed a refund of <strong>${safeAmount}</strong> for order <strong>${reference}</strong>. The credit may take some time to appear in your bank account or payment method.</p><p><a href="${link}">View order details</a></p><p>Money Tree Venture</p>`,
   };
 }
 export function transactionalRecipientAllowed(input: { gatewayEnvironment?: string; recipient: string; allowed?: string }): boolean {

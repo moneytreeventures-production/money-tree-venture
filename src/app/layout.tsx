@@ -3,21 +3,21 @@ import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { CartProvider } from "@/components/cart/cart-provider";
 import { Suspense } from "react";
-import { publicSiteOrigin } from "@/lib/seo/site-url";
+import { publicSiteOrigin, CANONICAL_SITE_ORIGIN } from "@/lib/seo/site-url";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  ...(publicSiteOrigin() ? { metadataBase: new URL(publicSiteOrigin()!) } : {}),
+  metadataBase: new URL(CANONICAL_SITE_ORIGIN),
   title: {
-    default: "MoneyTreeVentures | Learn More. Explore More. Grow More.",
-    template: "%s | MoneyTreeVentures",
+    default: "Money Tree Venture | Learn More. Explore More. Grow More.",
+    template: "%s | Money Tree Venture",
   },
 
   description:
     "Explore practical PDF guides, starter kits, bundles and 1:1 Call Guidance for digital skills and new ideas.",
 
-  applicationName: "MoneyTreeVentures",
+  applicationName: "Money Tree Venture",
 
   keywords: [
     "digital products",
@@ -25,13 +25,12 @@ export const metadata: Metadata = {
     "online learning",
     "digital skills",
     "starter kits",
-    "MoneyTreeVentures",
+    "Money Tree Venture",
   ],
 
-  robots: {
-    index: true,
-    follow: true,
-  },
+  openGraph: { type: "website", siteName: "Money Tree Venture", title: "Money Tree Venture", description: "Practical digital guides, resource bundles and 1:1 guidance.", images: ["/opengraph-image.png"] },
+  twitter: { card: "summary_large_image", title: "Money Tree Venture", description: "Practical digital guides and learning resources.", images: ["/opengraph-image.png"] },
+  robots: publicSiteOrigin() ? { index: true, follow: true } : { index: false, follow: false },
 };
 
 export const viewport: Viewport = {

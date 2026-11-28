@@ -11,6 +11,7 @@ import { readJsonBody } from "../../catalog/route-utils";
 import { assertMutationOrigin } from "../../http/mutation-origin";
 import { createCashfreePayment, getVerifiedPaymentStatus } from "./payment-service";
 import { CASHFREE_WEBHOOK_MAX_BODY_BYTES, processCashfreeWebhook } from "./webhook-service";
+import { requirePaymentCollection } from "../payment-activation";
 
 type PaymentContext = { params: Promise<{ id: string }> };
 type WebhookProcessor = (rawBody: string, headers: { timestamp: string | null; signature: string | null; idempotency: string | null }) => Promise<unknown>;
@@ -33,6 +34,7 @@ export function createCashfreePaymentRouteHandlers(options: {
     try {
       assertMutationOrigin(request);
       const customer = await authorize();
+      requirePaymentCollection();
       const { id } = await context.params;
       const data = await createPayment(id, customerId(customer), await readJsonBody(request), request.headers.get("idempotency-key") ?? "", undefined, requestId);
       return createJsonResponse({ success: true, data }, requestId, { status: 201 });

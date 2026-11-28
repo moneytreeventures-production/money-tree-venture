@@ -220,7 +220,7 @@ function ProductCatalogContents({ search }: { search: string }) {
     <section className="mt-container py-12 sm:py-16 lg:py-20">
       <div className="flex flex-col justify-between gap-6 border-b border-border pb-8 sm:flex-row sm:items-end">
         <div className="max-w-3xl">
-          <p className="mt-eyebrow">MONEYTREEVENTURES · PRODUCTS</p>
+          <p className="mt-eyebrow">MONEY TREE VENTURE · PRODUCTS</p>
           <h1 className="mt-4 text-4xl font-semibold leading-[1.02] tracking-[-0.05em] text-foreground [text-wrap:balance] sm:text-5xl lg:text-6xl">Choose a resource for your next step.</h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-foreground-secondary sm:text-base">Browse published PDF guides, PDF bundles, starter kits and 1:1 Call Guidance. Details and prices come from the live catalogue.</p>
         </div>

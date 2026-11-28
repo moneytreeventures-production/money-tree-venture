@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { ArrowDownRight, Menu, ShoppingBag, Sprout, X } from "lucide-react";
+import { ArrowDownRight, Menu, ShoppingBag, X } from "lucide-react";
+import { BrandLogo } from "./brand-logo";
 import ThemeToggle from "./theme-toggle";
 import { useCart } from "@/components/cart/cart-provider";
 import { authClient } from "@/lib/auth/client";
@@ -99,10 +100,10 @@ function NavbarContent() {
   return (
     <header className="mt-header sticky top-0 border-b border-border/80 bg-background/95 backdrop-blur-xl">
       <div className="mt-container flex min-h-[76px] items-center justify-between gap-3">
-        <Link href="/" className="group flex min-h-11 shrink-0 items-center gap-3" aria-label="MoneyTreeVentures — homepage">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-background transition-transform duration-300 group-hover:-rotate-6"><Sprout size={22} strokeWidth={1.8} /></span>
+        <Link href="/" className="group flex min-h-11 shrink-0 items-center gap-3" aria-label="Money Tree Venture — homepage">
+          <BrandLogo priority />
           <span className="flex flex-col leading-none">
-            <span className="text-[15px] font-bold tracking-tight text-foreground sm:text-base">MoneyTree<span className="text-accent-foreground">Ventures</span></span>
+            <span className="text-[15px] font-bold tracking-tight text-foreground sm:text-base">Money Tree <span className="text-accent-foreground">Venture</span></span>
             <span className="mt-1.5 text-[9px] font-semibold tracking-[0.08em] text-foreground-secondary max-[420px]:hidden">LEARN MORE · EXPLORE MORE · GROW MORE</span>
           </span>
         </Link>

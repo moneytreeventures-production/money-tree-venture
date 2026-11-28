@@ -34,6 +34,8 @@
     "db:bootstrap": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/initialize-indexes.js --bootstrap",
     "db:inventory": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/initialize-indexes.js --inventory",
     "db:verify": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/initialize-indexes.js --verify",
+    "db:prod:preflight": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/production-index-migration.js --preflight",
+    "db:prod:migrate": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/production-index-migration.js --apply",
     "db:init": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/initialize-indexes.js --init",
     "orders:maintain": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/maintain-orders.js",
     "payments:diagnose": "tsc -p tsconfig.admin-cli.json && node --require=./dev-dns.cjs --conditions=react-server .admin-build/scripts/diagnose-payment-recovery.js",

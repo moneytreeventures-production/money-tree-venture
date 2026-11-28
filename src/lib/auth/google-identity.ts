@@ -2,8 +2,25 @@ import "server-only";
 
 import mongoose, { Types } from "mongoose";
 import { DatabaseError } from "../errors/app-error";
+import { getServerEnv } from "../env/server";
 
 export const OWNER_ADMIN_EMAIL = "moneytreeventuress@gmail.com";
+
+export function configuredAdminEmails(value: string): Set<string> {
+  const emails = new Set<string>();
+  if (!value.trim()) throw new Error("Administrator allowlist is not configured.");
+  for (const candidate of value.split(",")) {
+    const email = normalizeIdentityEmail(candidate);
+    if (!email || email.includes("*") || !/^[a-z0-9.!#$%&'+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(email)) throw new Error("Administrator allowlist contains an invalid email address.");
+    emails.add(email);
+  }
+  return emails;
+}
+
+let cachedAdminEmails: Set<string> | undefined;
+export function getAllowedAdminEmails(): ReadonlySet<string> {
+  return cachedAdminEmails ??= configuredAdminEmails(getServerEnv().ADMIN_ALLOWED_EMAILS ?? "");
+}
 
 export interface GoogleAccountIdentity {
   email: string;
@@ -16,13 +33,13 @@ export function normalizeIdentityEmail(email: unknown): string {
   return typeof email === "string" ? email.trim().toLowerCase() : "";
 }
 
-export function isVerifiedOwnerGoogleIdentity(identity: GoogleAccountIdentity | null | undefined): boolean {
+export function isVerifiedOwnerGoogleIdentity(identity: GoogleAccountIdentity | null | undefined, allowedEmails: ReadonlySet<string> = getAllowedAdminEmails()): boolean {
   return Boolean(
     identity &&
       identity.active === true &&
       identity.emailVerified === true &&
       typeof identity.email === "string" &&
-      normalizeIdentityEmail(identity.email) === OWNER_ADMIN_EMAIL &&
+      allowedEmails.has(normalizeIdentityEmail(identity.email)) &&
       Array.isArray(identity.providerIds) &&
       identity.providerIds.length === 1 &&
       identity.providerIds[0] === "google",

@@ -5,7 +5,11 @@ import type { ReactNode } from "react";
 import { addCartItem, clearGuestCart, readGuestCart, writeGuestCart } from "@/lib/cart/cart";
 import type { Cart } from "@/lib/cart/cart";
 
+import { CartDrawer } from "./cart-drawer";
+import { usePathname } from "next/navigation";
+
 interface CartContextValue {
+  openCart(): void;
   items: Cart;
   count: number;
   ready: boolean;
@@ -18,6 +22,14 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const openCart = useCallback(() => setOpenedAt(pathname), [pathname]);
+  useEffect(() => {
+    // Navigation must also clear the old route, so Back cannot reopen the drawer.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpenedAt(null);
+  }, [pathname]);
   const [items, setItems] = useState<Cart>([]);
   const [ready, setReady] = useState(false);
   const itemsRef = useRef<Cart>([]);
@@ -49,8 +61,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!result.added) return false;
     itemsRef.current = result.cart;
     setItems(result.cart);
+    openCart();
     return true;
-  }, [ready]);
+  }, [ready, openCart]);
 
   const setQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity !== 1) return;
@@ -69,6 +82,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [updateItems]);
 
   const value = useMemo<CartContextValue>(() => ({
+    openCart,
     items,
     count: items.reduce((total, item) => total + item.quantity, 0),
     ready,
@@ -76,9 +90,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setQuantity,
     removeItem,
     clearCart,
-  }), [items, ready, addItem, setQuantity, removeItem, clearCart]);
+  }), [items, ready, addItem, setQuantity, removeItem, clearCart, openCart]);
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return <CartContext.Provider value={value}>{children}<CartDrawer open={openedAt !== null && openedAt === pathname} onClose={() => setOpenedAt(null)} /></CartContext.Provider>;
 }
 
 export function useCart(): CartContextValue {

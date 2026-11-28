@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, LoaderCircle, Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/components/cart/cart-provider";
 import { formatINR } from "@/lib/format/currency";
 import { canCommitCouponPreview, isCouponQuoteCurrent } from "@/lib/coupons/preview-pricing";
+import { SkeletonCartSummary } from "@/components/ui/skeleton";
 
 interface CartProduct {
   id: string;
@@ -133,7 +134,7 @@ export default function CartPage() {
   }, [appliedCouponCode, cartKey, couponRefresh, error, itemIds, items, loading, productById, productsForItemIds, ready]);
 
   if (!ready || loading) {
-    return <main className="mx-auto flex min-h-[50vh] max-w-4xl items-center justify-center gap-3 px-5 text-sm text-foreground-secondary" role="status"><LoaderCircle size={18} className="animate-spin" /> Loading your cart…</main>;
+    return <SkeletonCartSummary />;
   }
 
   const subtotal = items.reduce((sum, item) => {
@@ -213,7 +214,7 @@ export default function CartPage() {
               <span className="font-semibold text-foreground">{representable ? formatINR(displaySubtotal) : "Calculated at checkout"}</span>
             </div>
             <form onSubmit={applyCoupon} className="mt-5 border-t border-border pt-4"><label htmlFor="cart-coupon" className="text-sm font-medium">Coupon code</label><div className="mt-2 flex gap-2"><input id="cart-coupon" value={couponCode} onChange={event => setCouponCode(event.target.value)} maxLength={64} className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3" /><button disabled={couponBusy || !representable} className="min-h-11 rounded-full border border-border px-4 font-semibold focus-visible:outline-2 focus-visible:outline-accent">{couponBusy ? "Checking..." : "Apply"}</button></div><p role="status" aria-live="polite" className="mt-2 text-xs">{displayedCouponMessage}</p>{confirmedCoupon && <button type="button" onClick={() => {setAppliedCouponCode("");setCoupon(null);setCouponMessage("Coupon removed.");}} className="inline-flex min-h-11 items-center text-sm underline focus-visible:outline-2 focus-visible:outline-accent">Remove coupon</button>}</form>
-            {confirmedCoupon && <div className="mt-4 flex justify-between text-sm"><span>Discount</span><span>-{formatINR(discountPaise)}</span></div>}<div className="mt-4 flex justify-between border-t border-border pt-4 font-semibold"><span>Payable before applicable tax</span><span>{representable ? formatINR(payable) : "Calculated at checkout"}</span></div><p className="mt-3 text-xs text-foreground-secondary">The server rechecks availability, current prices and coupon eligibility at checkout.</p>{unavailable || !representable ? (
+            {confirmedCoupon && <div className="mt-4 flex justify-between text-sm"><span>Discount</span><span>-{formatINR(discountPaise)}</span></div>}<div className="mt-4 flex justify-between border-t border-border pt-4 font-semibold"><span>Amount payable</span><span>{representable ? formatINR(payable) : "Calculated at checkout"}</span></div><p className="mt-3 text-xs text-foreground-secondary">The server rechecks availability, current prices and coupon eligibility at checkout.</p>{unavailable || !representable ? (
               <button type="button" disabled className="mt-6 inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-full bg-accent px-5 text-sm font-semibold text-[#0f1e36] opacity-50">
                 Proceed to checkout <ArrowRight size={16} />
               </button>

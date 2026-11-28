@@ -11,7 +11,7 @@ interface AdminBooking {
 }
 
 const statusLabels: Record<BookingState, string> = {
-  awaiting_scheduling: "Awaiting customer preference", scheduled: "Scheduled for review", confirmed: "Confirmed", completed: "Complete", cancelled: "Cancelled",
+  awaiting_scheduling: "Awaiting scheduling", scheduled: "Scheduled", confirmed: "Confirmed", completed: "Completed", cancelled: "Cancelled",
 };
 
 export function AdminBookings({ bookings }: { bookings: AdminBooking[] }) {
@@ -50,8 +50,8 @@ export function AdminBookings({ bookings }: { bookings: AdminBooking[] }) {
     {feedback && <p className="rounded-lg border border-border px-4 py-3 text-sm text-foreground-secondary" role="alert">{feedback}</p>}
     {bookings.map((booking) => {
       const actions: BookingState[] = booking.status === "awaiting_scheduling" ? ["scheduled", "cancelled"] : booking.status === "scheduled" ? ["scheduled", "confirmed", "cancelled"] : booking.status === "confirmed" ? ["completed", "cancelled"] : [];
-      return <article key={booking.id} className="rounded-2xl border border-border bg-surface p-5 sm:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-lg font-semibold text-foreground">{booking.customer?.name ?? "Customer"}</h2><p className="mt-1 text-sm text-foreground-secondary">{booking.customer?.email ?? ""} · {booking.bookingReference}</p><p className="mt-1 text-xs text-foreground-secondary">Order {booking.orderReference ?? "—"} · {booking.sessionDurationMinutes} minute call</p></div><span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground-secondary">{statusLabels[booking.status]}</span></div>
+      return <article key={booking.id} className="min-w-0 rounded-2xl border border-border bg-surface p-5 sm:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-4"><div className="min-w-0"><h2 className="break-words text-lg font-semibold text-foreground">{booking.customer?.name ?? "Customer"}</h2><p className="mt-1 break-all text-sm text-foreground-secondary">{booking.customer?.email ?? ""} · {booking.bookingReference}</p><p className="mt-1 break-all text-xs text-foreground-secondary">Order {booking.orderReference ?? "—"} · {booking.sessionDurationMinutes} minute call</p></div><span className={`rounded-full border px-3 py-1 text-xs font-semibold ${booking.status === "awaiting_scheduling" ? "border-amber-700/30 bg-amber-500/10 text-foreground" : "border-border text-foreground-secondary"}`}>{statusLabels[booking.status]}</span></div>
         {booking.requestedSlots.length > 0 && <div className="mt-5"><h3 className="text-sm font-semibold text-foreground">Customer preferred times</h3><ul className="mt-2 flex flex-wrap gap-2">{booking.requestedSlots.map((slot) => <li key={new Date(slot.startsAt).toISOString()} className="rounded-lg bg-background px-3 py-2 text-xs text-foreground-secondary">{new Date(slot.startsAt).toLocaleString("en-IN", { timeZone: slot.timezone })} · {slot.timezone}</li>)}</ul></div>}
         {booking.customerNotes && <p className="mt-4 text-sm leading-6 text-foreground-secondary"><strong className="text-foreground">Customer note:</strong> {booking.customerNotes}</p>}
         {booking.schedulingInstructions && <p className="mt-3 text-sm leading-6 text-foreground-secondary">{booking.schedulingInstructions}</p>}

@@ -71,7 +71,7 @@ export function createBetterAuthOptions(
   provisionProfile: typeof provisionCustomerProfile = provisionCustomerProfile,
 ): BetterAuthOptions {
   return {
-    appName: "MoneyTreeVentures",
+    appName: "Money Tree Venture",
     baseURL: configuration.baseURL,
     secret: configuration.secret,
     trustedOrigins: [configuration.trustedOrigin],

@@ -163,7 +163,7 @@ export function AdminCategories() {
               <h2 id="category-form-title" className="text-lg font-semibold text-foreground">{editingId ? "Edit category" : "New category"}</h2>
               <p className="mt-1 text-sm text-foreground-secondary">Slugs are generated from the name and can be edited.</p>
             </div>
-            {total > 0 && <button type="button" onClick={startCreate} className="min-h-10 rounded-full px-3 text-sm font-semibold text-foreground-secondary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">Cancel</button>}
+            {total > 0 && <button type="button" onClick={startCreate} className="min-h-11 rounded-full px-3 text-sm font-semibold text-foreground-secondary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-accent">Cancel</button>}
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <label className="grid gap-2 text-sm font-medium text-foreground">Name
@@ -224,9 +224,9 @@ export function AdminCategories() {
                   <div className="mt-5 flex flex-wrap items-end justify-between gap-3 border-t border-border pt-4">
                     <p className="text-xs text-foreground-secondary">Display order: {category.displayOrder}</p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <button type="button" onClick={() => startEdit(category)} disabled={busy} className="min-h-10 rounded-full border border-border px-4 text-sm font-semibold text-foreground transition-colors hover:bg-background disabled:opacity-50">Edit</button>
+                      <button type="button" onClick={() => startEdit(category)} disabled={busy} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground transition-colors hover:bg-background disabled:opacity-50">Edit</button>
                       <label className="sr-only" htmlFor={`category-status-${category._id}`}>Status for {category.name}</label>
-                      <select id={`category-status-${category._id}`} value={category.status} disabled={busy || category.status === "archived"} onChange={(event) => void changeStatus(category, event.target.value as CategoryStatus)} className="min-h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground disabled:opacity-60">
+                      <select id={`category-status-${category._id}`} value={category.status} disabled={busy || category.status === "archived"} onChange={(event) => void changeStatus(category, event.target.value as CategoryStatus)} className="min-h-11 rounded-xl border border-border bg-background px-3 text-sm text-foreground disabled:opacity-60">
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                         <option value="archived">Archived</option>
@@ -240,9 +240,9 @@ export function AdminCategories() {
         )}
 
         {totalPages > 1 && <nav aria-label="Category pagination" className="mt-6 flex items-center justify-between gap-4">
-          <button type="button" disabled={page <= 1 || loading} onClick={() => setPage((current) => current - 1)} className="min-h-10 rounded-full border border-border px-4 text-sm font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50">Previous</button>
+          <button type="button" disabled={page <= 1 || loading} onClick={() => setPage((current) => current - 1)} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50">Previous</button>
           <p className="text-sm text-foreground-secondary" aria-live="polite">Page {page} of {totalPages}</p>
-          <button type="button" disabled={page >= totalPages || loading} onClick={() => setPage((current) => current + 1)} className="min-h-10 rounded-full border border-border px-4 text-sm font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50">Next</button>
+          <button type="button" disabled={page >= totalPages || loading} onClick={() => setPage((current) => current + 1)} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50">Next</button>
         </nav>}
       </section>
     </div>

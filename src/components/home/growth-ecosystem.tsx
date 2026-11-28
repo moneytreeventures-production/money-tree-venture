@@ -1,0 +1,78 @@
+"use client";
+
+import { type PointerEvent } from "react";
+import { BookOpen, Compass, Lightbulb, PencilRuler, Sprout } from "lucide-react";
+import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
+import { useHydratedReducedMotion } from "@/lib/use-hydrated-reduced-motion";
+
+const leaves = [
+  { className: "left-[6%] top-[12%]", icon: BookOpen, title: "Knowledge", detail: "Explore guides" },
+  { className: "right-[5%] top-[10%]", icon: PencilRuler, title: "Digital skills", detail: "Build understanding" },
+  { className: "left-[3%] top-[48%]", icon: Lightbulb, title: "Practice", detail: "Try new ideas" },
+  { className: "right-[3%] top-[49%]", icon: Compass, title: "New paths", detail: "Choose your way" },
+] as const;
+
+const branches = [
+  "M300 430 C300 344 300 268 300 175",
+  "M300 290 C256 265 203 226 141 151",
+  "M300 259 C349 228 402 178 465 137",
+  "M300 355 C237 330 183 317 108 287",
+  "M300 338 C358 314 416 298 493 281",
+] as const;
+
+export default function GrowthEcosystem() {
+  const reducedMotion = useHydratedReducedMotion();
+  const pointerX = useMotionValue(0);
+  const pointerY = useMotionValue(0);
+  const leanX = useSpring(pointerX, { stiffness: 125, damping: 24 });
+  const leanY = useSpring(pointerY, { stiffness: 125, damping: 24 });
+  const leftBranchX = useTransform(leanX, value => value * -0.55);
+  const rightBranchX = useTransform(leanX, value => value * 0.55);
+  const upperBranchY = useTransform(leanY, value => value * -0.45);
+  const lowerBranchY = useTransform(leanY, value => value * 0.45);
+
+  function move(event: PointerEvent<HTMLDivElement>) {
+    if (reducedMotion || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    pointerX.set(((event.clientX - rect.left) / rect.width - 0.5) * 6);
+    pointerY.set(((event.clientY - rect.top) / rect.height - 0.5) * 6);
+  }
+
+  function reset() { pointerX.set(0); pointerY.set(0); }
+
+  return <div data-growth-ecosystem aria-hidden="true" onPointerMove={move} onPointerLeave={reset} onPointerCancel={reset} className="relative mx-auto aspect-[1.08/1] w-full max-w-[610px] overflow-hidden rounded-[2rem] border border-orange-300/20 bg-[#0f1e36] shadow-[0_28px_65px_-42px_rgba(15,30,54,0.8),0_0_55px_-28px_rgba(249,115,22,0.65)] sm:aspect-[1.18/1]">
+    <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(to_right,rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:14%_14%]" />
+    <div className="absolute left-[7%] top-[5%] flex items-center gap-2 text-[9px] font-bold tracking-[0.15em] text-orange-200 sm:text-[10px]"><span className="size-1.5 rounded-full bg-orange-400" /> THE GROWTH MAP</div>
+
+    <motion.div data-growth-lean className="pointer-events-none absolute inset-0" style={{ rotate: reducedMotion ? 0 : leanX, x: reducedMotion ? 0 : leanX, y: reducedMotion ? 0 : leanY, transformOrigin: "50% 85%" }}>
+    <svg viewBox="0 0 600 520" className="size-full" fill="none" preserveAspectRatio="xMidYMid meet" focusable="false">
+      <defs>
+        <radialGradient id="growth-node-halo"><stop stopColor="#ffb55e" stopOpacity=".8" /><stop offset="1" stopColor="#fb923c" stopOpacity="0" /></radialGradient>
+      </defs>
+      <circle cx="300" cy="297" r="139" stroke="white" strokeOpacity=".08" />
+      <circle cx="300" cy="297" r="204" stroke="white" strokeOpacity=".05" />
+      {branches.map((path, index) => <motion.g data-growth-branch key={path} style={{ x: reducedMotion ? 0 : index % 2 ? leftBranchX : rightBranchX, y: reducedMotion ? 0 : index < 3 ? upperBranchY : lowerBranchY }}>
+        <path d={path} stroke="#ffc18d" strokeOpacity=".28" strokeWidth="2" strokeLinecap="round" />
+        <path d={path} stroke="#fb923c" strokeOpacity=".2" strokeWidth="9" strokeLinecap="round" />
+        <path className="mt-growth-path" style={{ animationDelay: `${index * 130}ms` }} pathLength="1" d={path} stroke="#ffb45c" strokeWidth="2.5" strokeLinecap="round" />
+        <path className="mt-growth-flow" style={{ animationDelay: `${1.8 + index * 0.55}s`, strokeDashoffset: index * 0.18 }} pathLength="1" d={path} stroke="#fff1c5" strokeWidth="3" strokeLinecap="round" />
+      </motion.g>)}
+      <path d="M300 430 C267 453 243 465 214 477 M300 430 C330 453 359 464 389 477" stroke="#ffc18d" strokeOpacity=".45" strokeWidth="2" strokeLinecap="round" />
+      {[[300, 295, 25], [141, 151, 19], [465, 137, 19], [108, 287, 19], [493, 281, 19]].map(([cx, cy, radius], index) => <g key={`${cx}-${cy}`}>
+        <circle className="mt-growth-halo" style={{ animationDelay: `${index * 0.45}s` }} cx={cx} cy={cy} r={radius} fill="url(#growth-node-halo)" />
+        <circle cx={cx} cy={cy} r={index === 0 ? 7 : 5} fill="#ffb45c" />
+        <circle cx={cx} cy={cy} r={index === 0 ? 2.5 : 1.5} fill="#fff1c5" />
+      </g>)}
+    </svg>
+    </motion.div>
+
+    {leaves.map(({ className, icon: Icon, title, detail }) => <div key={title} className={`absolute flex min-w-[38%] items-start gap-2 rounded-xl border border-white/15 bg-[#182b46]/95 p-2.5 text-white shadow-lg shadow-black/10 sm:min-w-[34%] sm:gap-3 sm:p-3.5 ${className}`}>
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-400/15 text-orange-200 sm:size-9"><Icon size={17} strokeWidth={1.7} /></span>
+      <span className="min-w-0"><span className="block text-[11px] font-semibold leading-4 sm:text-sm">{title}</span><span className="mt-0.5 hidden text-[10px] leading-4 text-slate-300 sm:block sm:text-xs">{detail}</span></span>
+    </div>)}
+
+    <div className="absolute bottom-[6%] left-1/2 flex w-[51%] -translate-x-1/2 items-center justify-center gap-2 rounded-full border border-orange-300/40 bg-[#26354a] px-3 py-2 text-center text-[10px] font-semibold text-white shadow-lg sm:w-[45%] sm:py-2.5 sm:text-xs">
+      <Sprout size={17} className="shrink-0 text-orange-300" /> Start with an idea
+    </div>
+  </div>;
+}

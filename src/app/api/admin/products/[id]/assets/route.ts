@@ -11,10 +11,10 @@ async function readMultipartRequest(request: Request, maximumBytes: number): Pro
   const maxBody = maximumBytes + 1024 * 1024;
   if (declared && Number(declared) > maxBody) {
     await request.body?.cancel().catch(() => undefined);
-    throw new ValidationError([{ field: "file", message: "PDF file configured limit se badi hai." }]);
+    throw new ValidationError([{ field: "file", message: "The PDF exceeds the allowed size limit." }]);
   }
   const reader = request.body?.getReader();
-  if (!reader) throw new ValidationError([{ field: "file", message: "PDF file attach karein." }]);
+  if (!reader) throw new ValidationError([{ field: "file", message: "Attach a PDF file." }]);
   const chunks: Uint8Array[] = [];
   let total = 0;
   while (true) {
@@ -23,7 +23,7 @@ async function readMultipartRequest(request: Request, maximumBytes: number): Pro
     total += value.byteLength;
     if (total > maxBody) {
       await reader.cancel().catch(() => undefined);
-      throw new ValidationError([{ field: "file", message: "PDF file configured limit se badi hai." }]);
+      throw new ValidationError([{ field: "file", message: "The PDF exceeds the allowed size limit." }]);
     }
     chunks.push(value);
   }
@@ -44,8 +44,8 @@ export const POST = withAdmin<Context>(async (request, admin, context) => {
   const boundedRequest = await readMultipartRequest(request, config.maxUploadBytes);
   const form = await boundedRequest.formData();
   const file = form.get("file");
-  if (!(file instanceof File)) throw new ValidationError([{ field: "file", message: "PDF file attach karein." }]);
-  if (!admin._id) throw new ValidationError([{ field: "admin", message: "Admin identity available nahi hai." }]);
+  if (!(file instanceof File)) throw new ValidationError([{ field: "file", message: "Attach a PDF file." }]);
+  if (!admin._id) throw new ValidationError([{ field: "admin", message: "Admin identity is unavailable." }]);
   const data = await uploadProductPdf(id, file, admin._id.toString());
   return createJsonResponse({ success: true, data }, undefined, { status: 201 });
 });

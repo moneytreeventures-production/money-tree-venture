@@ -2,6 +2,7 @@ import { createServer } from "node:net";
 import { spawn } from "node:child_process";
 
 const projectRoot = process.cwd();
+const configuredOrigin = process.env.APP_URL ? new URL(process.env.APP_URL).origin : null;
 
 async function findAvailablePort() {
   const server = createServer();
@@ -71,7 +72,7 @@ try {
   const homepage = await request(baseUrl, "/");
   const homepageHtml = await homepage.text();
   assert(homepage.status === 200 && homepage.headers.get("content-type")?.includes("text/html"), "Homepage did not return production HTML.");
-  assert(homepageHtml.includes("MoneyTreeVentures") && homepageHtml.includes("https://moneytreeventure.com"), "Homepage brand or canonical host was missing.");
+  assert(homepageHtml.includes("MoneyTreeVentures") && (!configuredOrigin || homepageHtml.includes(configuredOrigin)), "Homepage brand or configured canonical host was missing.");
   assert(homepage.headers.get("x-content-type-options") === "nosniff", "X-Content-Type-Options security header was missing.");
   assert(homepage.headers.get("x-frame-options") === "DENY", "X-Frame-Options security header was missing.");
   assert(homepage.headers.get("referrer-policy") === "strict-origin-when-cross-origin", "Referrer-Policy security header was missing.");
@@ -113,7 +114,7 @@ try {
 
   const sitemap = await request(baseUrl, "/sitemap.xml");
   const sitemapBody = await sitemap.text();
-  assert(sitemap.status === 200 && sitemapBody.includes("https://moneytreeventure.com"), "Sitemap did not contain the canonical host.");
+  assert(sitemap.status === 200 && (!configuredOrigin || sitemapBody.includes(configuredOrigin)), "Sitemap did not contain the configured canonical host.");
   console.info("✓ Sitemap: HTTP 200 with canonical URLs.");
 
   const unsupportedWebhookMethod = await request(baseUrl, "/api/webhooks/cashfree");

@@ -251,8 +251,8 @@ export async function createOrder(input: unknown, customer: { id: string; name: 
   }
 
   const env = getServerEnv();
-  if (env.TAX_RATE_BPS === undefined) throw new IntegrationConfigurationError("Tax", ["TAX_RATE_BPS"]);
-  const taxRateBps = env.TAX_RATE_BPS as number;
+  // New orders carry a zero-tax compatibility snapshot; historical snapshots remain unchanged.
+  const taxRateBps = 0;
   const gatewayEnvironment = env.CASHFREE_ENVIRONMENT ?? (env.NODE_ENV === "production" ? undefined : "sandbox");
   if (!gatewayEnvironment) throw new IntegrationConfigurationError("Cashfree", ["CASHFREE_ENVIRONMENT"]);
 
@@ -391,7 +391,7 @@ export async function createOrder(input: unknown, customer: { id: string; name: 
           };
         }),
         subtotalPaise, discountPaise, taxPaise, totalPaise, currency: "INR",
-        taxSnapshot: { rateBasisPoints: taxRateBps, calculationVersion: "inclusive-tax-v1" },
+        taxSnapshot: { rateBasisPoints: 0, calculationVersion: "no-tax-v1" },
         ...(coupon ? { couponSnapshot: { couponId: coupon._id, code: coupon.code, discountPaise } } : {}),
         checkoutIdempotencyKey: idempotencyKey,
         checkoutRequestHash: requestHash,

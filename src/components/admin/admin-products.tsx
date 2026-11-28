@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { ProductCategoryPicker, type ProductCategoryLoadState } from "./product-category-picker";
 import { initialProductCategorySelection } from "./product-category-picker";
+import { SkeletonDataTable } from "../ui/skeleton";
+import { AccessibleOverlay } from "../ui/accessible-overlay";
 
 type ProductType = "pdf" | "pdf_bundle" | "call_guidance";
 type ProductStatus = "draft" | "published" | "archived";
@@ -25,6 +27,7 @@ interface Props { initialProducts?: AdminProduct[]; categories?: Category[] }
 const typeLabels: Record<ProductType, string> = { pdf: "PDF", pdf_bundle: "PDF Bundle", call_guidance: "Consultant Call" };
 const statusLabels: Record<ProductStatus, string> = { draft: "Draft", published: "Published", archived: "Archived" };
 const inputClass = "min-h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
+const filterClass = "min-h-11 min-w-36 rounded-xl border border-border bg-background px-3.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
 const labelClass = "grid gap-2 text-sm font-medium text-foreground";
 
 function readError(result: ApiResult<unknown>, fallback: string) {
@@ -150,6 +153,7 @@ export function AdminProducts(props: Props) {
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminProduct | null>(null);
 
   async function loadCategories() {
     setCategoryLoadState("loading");
@@ -178,7 +182,7 @@ export function AdminProducts(props: Props) {
     if (categoryId) query.set("categoryId", categoryId);
     const response = await fetch(`/api/admin/products?${query}`, { credentials: "same-origin", cache: "no-store" });
     const result = await response.json() as ApiResult<{ items: AdminProduct[]; pagination: { total: number; totalPages: number } }>;
-    if (!response.ok || !result.success || !result.data) throw new Error(readError(result, "Products load nahi ho paaye."));
+    if (!response.ok || !result.success || !result.data) throw new Error(readError(result, "Products could not be loaded."));
     setProducts(normalizeAdminProducts(result.data.items)); setTotal(Number.isSafeInteger(result.data.pagination?.total) ? result.data.pagination.total : 0); setPages(Math.max(1, Number.isSafeInteger(result.data.pagination?.totalPages) ? result.data.pagination.totalPages : 1)); setPage(nextPage);
     } finally {
       setLoading(false);
@@ -190,7 +194,7 @@ export function AdminProducts(props: Props) {
     void Promise.all([
       fetch("/api/admin/products?page=1&pageSize=20", { credentials: "same-origin", cache: "no-store" }).then(async (response) => {
         const result = await response.json() as ApiResult<{ items: AdminProduct[]; pagination: { total: number; totalPages: number } }>;
-        if (!response.ok || !result.success || !result.data) throw new Error(readError(result, "Products load nahi ho paaye."));
+        if (!response.ok || !result.success || !result.data) throw new Error(readError(result, "Products could not be loaded."));
         if (!cancelled) { setProducts(normalizeAdminProducts(result.data.items)); setTotal(Number.isSafeInteger(result.data.pagination?.total) ? result.data.pagination.total : 0); setPages(Math.max(1, Number.isSafeInteger(result.data.pagination?.totalPages) ? result.data.pagination.totalPages : 1)); }
       }),
       fetch("/api/admin/categories?page=1&pageSize=100", { credentials: "same-origin", cache: "no-store" }).then(async (response) => {
@@ -200,7 +204,7 @@ export function AdminProducts(props: Props) {
       }).catch((cause: unknown) => {
         if (!cancelled) { setCategoryLoadState("error"); setCategoryLoadError(cause instanceof Error ? cause.message : "Categories could not be loaded."); }
       }),
-    ]).catch((cause: unknown) => { if (!cancelled) setError(cause instanceof Error ? cause.message : "Products load nahi ho paaye."); })
+    ]).catch((cause: unknown) => { if (!cancelled) setError(cause instanceof Error ? cause.message : "Products could not be loaded."); })
       .finally(() => { if (!cancelled) setLoading(false); });
     // Product and category requests have independent error states.
     return () => { cancelled = true; };
@@ -208,7 +212,7 @@ export function AdminProducts(props: Props) {
 
   async function refresh(nextPage = page) {
     try { setError(""); await loadProducts(nextPage); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Products load nahi ho paaye."); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Products could not be loaded."); }
   }
 
   async function changeStatus(product: AdminProduct, next: ProductStatus) {
@@ -216,43 +220,42 @@ export function AdminProducts(props: Props) {
     try {
       const response = await fetch(`/api/admin/products/${product._id}/status`, { method: "PATCH", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: next }) });
       const result = await response.json() as ApiResult<unknown>;
-      if (!response.ok || !result.success) throw new Error(readError(result, "Status update save nahi hua."));
-      setFeedback(`${productDisplayName(product)} ka status ${statusLabels[next]} ho gaya.`); await refresh();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Status update save nahi hua."); }
+      if (!response.ok || !result.success) throw new Error(readError(result, "The status could not be updated."));
+      setFeedback(`${productDisplayName(product)} status changed to ${statusLabels[next]}.`); await refresh();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "The status could not be updated."); }
     finally { setBusy(null); }
   }
 
   async function removeProduct(product: AdminProduct) {
-    if (!window.confirm(`“${productDisplayName(product)}” ko permanently delete karein? Customer/order history wale products delete nahi honge; unhe archive karein.`)) return;
     setBusy(product._id); setError(""); setFeedback("");
     try {
       const response = await fetch(`/api/admin/products/${product._id}`, { method: "DELETE", credentials: "same-origin" });
       const result = await response.json() as ApiResult<unknown>;
-      if (!response.ok || !result.success) throw new Error(readError(result, "Product delete nahi hua. History wale product ko archive karein."));
-      setFeedback("Product aur unreferenced private PDF asset delete ho gaye."); await refresh();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Product delete nahi hua."); }
+      if (!response.ok || !result.success) throw new Error(readError(result, "The product could not be deleted. Archive products linked to customer history."));
+      setDeleteTarget(null); setFeedback("The product and its unreferenced private PDF asset were deleted."); await refresh();
+    } catch (cause) { setDeleteTarget(null); setError(cause instanceof Error ? cause.message : "The product could not be deleted."); }
     finally { setBusy(null); }
   }
 
   const countLabel = useMemo(() => `${total} product${total === 1 ? "" : "s"}`, [total]);
   return <div className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
     <div className="flex flex-wrap items-end justify-between gap-5">
-      <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-foreground">ADMIN · CATALOGUE</p><h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">Product management</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-foreground-secondary">Products, private PDFs aur publishing status yahan manage karein.</p></div>
-      <button type="button" onClick={() => { setEditing(null); setError(""); setFeedback(""); }} className="min-h-11 rounded-full bg-primary px-5 text-sm font-semibold text-background transition hover:bg-primary-hover">+ Product add karein</button>
+      <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-foreground">ADMIN · CATALOGUE</p><h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">Product management</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-foreground-secondary">Manage products, private PDFs, and publication status.</p></div>
+      <button type="button" onClick={() => { setEditing(null); setError(""); setFeedback(""); }} className="min-h-11 rounded-full bg-primary px-5 text-sm font-semibold text-background transition hover:bg-primary-hover">+ Add product</button>
     </div>
     <div className="mt-8 flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-surface p-4">
-      <label className="min-w-52 flex-1"><span className="sr-only">Product search</span><input className={inputClass} value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void refresh(1); }} placeholder="Title ya short description search karein" /></label>
-      <select aria-label="Publication status filter" className={`${inputClass} w-auto min-w-36`} value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Sabhi statuses</option><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select>
-      <select aria-label="Product type filter" className={`${inputClass} w-auto min-w-40`} value={productType} onChange={(event) => setProductType(event.target.value)}><option value="">Sabhi types</option><option value="pdf">PDF</option><option value="pdf_bundle">PDF Bundle</option><option value="call_guidance">Consultant Call</option></select>
-      <select aria-label="Category filter" className={`${inputClass} w-auto min-w-40`} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">Sabhi categories</option>{categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
+      <label className="min-w-52 flex-1"><span className="sr-only">Product search</span><input className={inputClass} value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void refresh(1); }} placeholder="Search title or short description" /></label>
+      <select aria-label="Publication status filter" className={filterClass} value={status} onChange={(event) => setStatus(event.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option></select>
+      <select aria-label="Product type filter" className={filterClass} value={productType} onChange={(event) => setProductType(event.target.value)}><option value="">All types</option><option value="pdf">PDF</option><option value="pdf_bundle">PDF Bundle</option><option value="call_guidance">Consultant Call</option></select>
+      <select aria-label="Category filter" className={filterClass} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">All categories</option>{categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
       <button type="button" onClick={() => void refresh(1)} className="min-h-11 rounded-full border border-border px-5 text-sm font-semibold text-foreground transition hover:bg-background">Search</button>
     </div>
     {feedback && <p className="mt-4 rounded-xl border border-emerald-700/20 bg-emerald-500/10 px-4 py-3 text-sm text-foreground" role="status">{feedback}</p>}
     {error && <p className="mt-4 rounded-xl border border-red-700/20 bg-red-500/10 px-4 py-3 text-sm text-foreground" role="alert">{error}</p>}
-    <div className="mt-5 flex items-center justify-between text-xs text-foreground-secondary"><span>{countLabel}</span><span>Private PDF links admin list mein show nahi hote.</span></div>
+    <div className="mt-5 flex items-center justify-between text-xs text-foreground-secondary"><span>{countLabel}</span><span>Private PDF links are not shown in the product list.</span></div>
     <section className="mt-3 overflow-hidden rounded-2xl border border-border bg-surface" aria-label="Products">
       <div className="hidden grid-cols-[minmax(0,2fr)_minmax(85px,.65fr)_minmax(100px,.8fr)_minmax(105px,.85fr)_minmax(90px,.7fr)_minmax(220px,1.4fr)] gap-4 border-b border-border bg-background/60 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-foreground-secondary lg:grid"><span>Product</span><span>Type</span><span>Category</span><span>Price</span><span>Status</span><span>Actions</span></div>
-      {loading ? <p className="p-8 text-center text-sm text-foreground-secondary" role="status">Loading products...</p> : error && products.length === 0 ? <p className="p-8 text-center text-sm text-foreground-secondary">Product list could not be loaded.</p> : products.length === 0 ? <p className="p-8 text-center text-sm text-foreground-secondary">Is filter ke liye koi product nahi mila.</p> : products.map((product) => {
+      {loading ? <SkeletonDataTable /> : error && products.length === 0 ? <p className="p-8 text-center text-sm text-foreground-secondary">Product list could not be loaded.</p> : products.length === 0 ? <p className="p-8 text-center text-sm text-foreground-secondary">No products match these filters.</p> : products.map((product) => {
         const thumb = safeThumbnail(product.imageRefs?.[0]);
         const displayName = productDisplayName(product);
         const requiredRecordWarnings = product.recordWarnings?.filter((warning) => warning !== "Thumbnail missing or invalid") ?? [];
@@ -261,22 +264,23 @@ export function AdminProducts(props: Props) {
         const displayedStatus = product.hasValidStatus ? statusLabels[product.publicationStatus] : "Unknown status";
         const productCategories = product.categoryIds.map((id) => categories.find((category) => category._id === id)?.name).filter((name): name is string => Boolean(name));
         return <article key={product._id} className="grid gap-4 border-b border-border p-4 last:border-0 sm:p-5 lg:grid-cols-[minmax(0,2fr)_minmax(85px,.65fr)_minmax(100px,.8fr)_minmax(105px,.85fr)_minmax(90px,.7fr)_minmax(220px,1.4fr)] lg:items-center">
-          <div className="flex min-w-0 items-center gap-4"><div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-background">{thumb ? <Image src={thumb} alt={`${displayName} thumbnail`} fill sizes="64px" unoptimized className="object-cover" /> : <span className="px-1 text-center text-[10px] font-semibold text-foreground-secondary">No image</span>}</div><div className="min-w-0"><h2 className="truncate font-semibold text-foreground">{displayName}</h2><p className="mt-1 truncate text-xs text-foreground-secondary">{product.slug ? `/${product.slug}` : "Slug unavailable"}</p></div></div>
+          <div className="flex min-w-0 items-center gap-4"><div className="relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-background">{thumb ? <Image src={thumb} alt={`${displayName} thumbnail`} fill sizes="64px" unoptimized className="object-cover" /> : <span className="px-1 text-center text-[10px] font-semibold text-foreground-secondary">No image</span>}</div><div className="min-w-0"><h2 className="break-words font-semibold text-foreground">{displayName}</h2><p className="mt-1 break-all text-xs text-foreground-secondary">{product.slug ? `/${product.slug}` : "Slug unavailable"}</p></div></div>
           <div><span className="lg:hidden text-xs text-foreground-secondary">Type: </span><span className="text-sm text-foreground-secondary">{displayedType}</span>{product.bundleKind && product.hasValidType && <span className="ml-1 text-xs text-foreground-secondary">({product.bundleKind === "starter_kit" ? "Starter Kit" : "Bundle"})</span>}</div>
           <div className="text-sm text-foreground-secondary"><span className="mb-1 block text-[11px] lg:hidden">Category</span><span>{productCategories.join(", ") || (product.categoryIds.length ? "Category unavailable" : "No category")}</span></div>
           <div><p className="text-sm font-semibold text-foreground">{product.hasValidPrice ? `INR ${rupees(product.pricePaise)}` : "Price unavailable"}</p>{product.compareAtPricePaise !== undefined && <p className="mt-1 text-xs text-foreground-secondary">Compare at INR {rupees(product.compareAtPricePaise)}</p>}{product.featured && <span className="mt-1 inline-block rounded-full border border-accent/30 px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">Featured</span>}</div>
           <span className={`w-fit rounded-full border px-3 py-1 text-xs font-medium ${product.publicationStatus === "published" && product.hasValidStatus ? "border-emerald-700/20 bg-emerald-500/10 text-foreground" : "border-border text-foreground-secondary"}`}>{displayedStatus}</span>
-          <div className="flex flex-wrap gap-2 lg:col-span-1"><button type="button" disabled={!product.canManage} onClick={() => { setEditing(product); setError(""); setFeedback(""); }} className="min-h-9 rounded-full border border-border px-3.5 text-xs font-semibold text-foreground hover:bg-background disabled:opacity-50">Edit</button>
-            {product.hasValidStatus && product.publicationStatus === "draft" && <button type="button" disabled={!lifecycleAllowed || busy === product._id} onClick={() => void changeStatus(product, "published")} className="min-h-9 rounded-full bg-primary px-3.5 text-xs font-semibold text-background hover:bg-primary-hover disabled:opacity-50">Publish</button>}
-            {product.hasValidStatus && product.publicationStatus === "published" && <button type="button" disabled={!lifecycleAllowed || busy === product._id} onClick={() => void changeStatus(product, "draft")} className="min-h-9 rounded-full border border-border px-3.5 text-xs font-semibold text-foreground hover:bg-background disabled:opacity-50">Unpublish</button>}
-            {product.hasValidStatus && product.publicationStatus !== "archived" && <button type="button" disabled={!lifecycleAllowed || busy === product._id} onClick={() => void changeStatus(product, "archived")} className="min-h-9 rounded-full border border-border px-3.5 text-xs font-semibold text-foreground-secondary hover:bg-background disabled:opacity-50">Archive</button>}
-            {product.hasValidStatus && product.publicationStatus !== "published" && <button type="button" disabled={!product.canManage || busy === product._id} onClick={() => void removeProduct(product)} className="min-h-9 rounded-full border border-red-700/20 px-3.5 text-xs font-semibold text-red-700 hover:bg-red-500/10 disabled:opacity-50">Delete</button>}
+          <div className="flex flex-wrap gap-2 lg:col-span-1"><button type="button" disabled={!product.canManage} onClick={() => { setEditing(product); setError(""); setFeedback(""); }} className="min-h-11 rounded-full border border-border px-3.5 text-xs font-semibold text-foreground hover:bg-background disabled:opacity-50">Edit</button>
+            {product.hasValidStatus && product.publicationStatus === "draft" && <button type="button" disabled={!lifecycleAllowed || busy === product._id} onClick={() => void changeStatus(product, "published")} className="min-h-11 rounded-full bg-primary px-3.5 text-xs font-semibold text-background hover:bg-primary-hover disabled:opacity-50">Publish</button>}
+            {product.hasValidStatus && product.publicationStatus === "published" && <button type="button" disabled={!lifecycleAllowed || busy === product._id} onClick={() => void changeStatus(product, "draft")} className="min-h-11 rounded-full border border-border px-3.5 text-xs font-semibold text-foreground hover:bg-background disabled:opacity-50">Unpublish</button>}
+            {product.hasValidStatus && product.publicationStatus !== "archived" && <button type="button" disabled={!lifecycleAllowed || busy === product._id} onClick={() => void changeStatus(product, "archived")} className="min-h-11 rounded-full border border-border px-3.5 text-xs font-semibold text-foreground-secondary hover:bg-background disabled:opacity-50">Archive</button>}
+            {product.hasValidStatus && product.publicationStatus !== "published" && <button type="button" disabled={!product.canManage || busy === product._id} onClick={() => setDeleteTarget(product)} className="min-h-11 rounded-full border border-red-700/20 px-3.5 text-xs font-semibold text-red-700 hover:bg-red-500/10 disabled:opacity-50">Delete</button>}
           </div>
           {product.recordWarnings?.length ? <p className="rounded-lg border border-amber-700/20 bg-amber-500/10 px-3 py-2 text-xs text-foreground sm:col-span-2 lg:col-span-6" role="status">Record needs attention: {product.recordWarnings.join("; ")}. Required data issues disable lifecycle changes; a thumbnail is optional. {product.legacyTitle ? "Legacy title is shown temporarily; save a canonical name to repair this record." : ""}</p> : null}
         </article>;
       })}
     </section>
-    <div className="mt-5 flex items-center justify-between"><button type="button" disabled={page <= 1} onClick={() => { setPage((value) => value - 1); void loadProducts(page - 1); }} className="min-h-10 rounded-full border border-border px-4 text-sm disabled:opacity-40">Pichhla</button><span className="text-sm text-foreground-secondary">Page {page} / {pages}</span><button type="button" disabled={page >= pages} onClick={() => { setPage((value) => value + 1); void loadProducts(page + 1); }} className="min-h-10 rounded-full border border-border px-4 text-sm disabled:opacity-40">Agla</button></div>
+    <nav aria-label="Product pagination" className="mt-5 flex items-center justify-between gap-3"><button type="button" disabled={page <= 1 || loading} onClick={() => void refresh(page - 1)} className="min-h-11 rounded-full border border-border px-4 text-sm disabled:opacity-40">Previous</button><span className="text-sm text-foreground-secondary">Page {page} of {pages}</span><button type="button" disabled={page >= pages || loading} onClick={() => void refresh(page + 1)} className="min-h-11 rounded-full border border-border px-4 text-sm disabled:opacity-40">Next</button></nav>
+    <AccessibleOverlay open={deleteTarget !== null} onClose={() => { if (!busy) setDeleteTarget(null); }} titleId="delete-product-title" descriptionId="delete-product-description" className="max-w-lg"><h2 id="delete-product-title" className="text-xl font-semibold text-foreground">Permanently delete product?</h2><p id="delete-product-description" className="mt-3 break-words text-sm leading-6 text-foreground-secondary">{deleteTarget ? productDisplayName(deleteTarget) : "This product"} will be deleted. Products linked to customers or orders cannot be deleted; archive them instead.</p><div className="mt-6 flex flex-wrap justify-end gap-3"><button type="button" disabled={Boolean(busy)} onClick={() => setDeleteTarget(null)} className="min-h-11 rounded-full border border-border px-5 text-sm font-semibold">Cancel</button><button type="button" disabled={Boolean(busy)} onClick={() => { if (deleteTarget) void removeProduct(deleteTarget); }} className="min-h-11 rounded-full bg-primary px-5 text-sm font-semibold text-background disabled:opacity-50">{busy ? "Deleting..." : "Delete product"}</button></div></AccessibleOverlay>
     {editing !== undefined && <ProductEditor product={editing} categories={categories} categoryLoadState={categoryLoadState} categoryLoadError={categoryLoadError} onRetryCategories={() => void loadCategories()} products={products} onClose={() => setEditing(undefined)} onSaved={async (message) => { setEditing(undefined); setFeedback(message); await refresh(); }} onError={setError} />}
   </div>;
 }
@@ -323,7 +327,7 @@ function ProductEditor({ product, categories, categoryLoadState, categoryLoadErr
 
   async function uploadMedia(file: File, kind: "thumbnail" | "promotional_video") {
     if (!product?._id || !product.canManage) {
-      setMediaError("Pehle product draft save karein, phir media upload karein.");
+      setMediaError("Save the product draft before uploading media.");
       return;
     }
     setMediaError("");
@@ -336,20 +340,20 @@ function ProductEditor({ product, categories, categoryLoadState, categoryLoadErr
         body: JSON.stringify({ kind, fileName: file.name, contentType: file.type, sizeBytes: file.size }),
       });
       const intent = await intentResponse.json() as ApiResult<{ mediaId: string; uploadUrl: string; headers: Record<string, string> }>;
-      if (!intentResponse.ok || !intent.success || !intent.data) throw new Error(readError(intent, "Upload shuru nahi ho paaya."));
+      if (!intentResponse.ok || !intent.success || !intent.data) throw new Error(readError(intent, "The upload could not be started."));
       await uploadFileToR2(intent.data.uploadUrl, intent.data.headers, file, setMediaProgress);
       const completeResponse = await fetch(`/api/admin/products/${product._id}/media/uploads/${intent.data.mediaId}/complete`, { method: "POST", credentials: "same-origin" });
       const completed = await completeResponse.json() as ApiResult<ProductMediaItem>;
-      if (!completeResponse.ok || !completed.success || !completed.data?.publicUrl) throw new Error(readError(completed, "Media verify ya publish nahi ho paaya."));
+      if (!completeResponse.ok || !completed.success || !completed.data?.publicUrl) throw new Error(readError(completed, "The media could not be verified or published."));
       if (mediaPreview?.local) URL.revokeObjectURL(mediaPreview.url);
       setMediaPreview({ kind, url: completed.data.publicUrl, local: false });
       if (kind === "thumbnail") setImageRefs((current) => [completed.data!.publicUrl!, ...current.split("\n").map((value) => value.trim()).filter((value) => value && value !== completed.data!.publicUrl)].join("\n"));
       else setPromotionalVideoUrl(completed.data.publicUrl);
       setMediaItems((current) => [completed.data!, ...current]);
       setMessageStatus("success");
-      setMessage(kind === "thumbnail" ? "Thumbnail upload aur save ho gaya." : "Promotional video upload aur save ho gaya.");
+      setMessage(kind === "thumbnail" ? "Thumbnail uploaded and saved." : "Promotional video uploaded and saved.");
     } catch (cause) {
-      setMediaError(cause instanceof Error ? cause.message : "Media upload nahi ho paaya.");
+      setMediaError(cause instanceof Error ? cause.message : "The media could not be uploaded.");
       if (mediaPreview?.local) URL.revokeObjectURL(mediaPreview.url);
       setMediaPreview(null);
     } finally { setMediaProgress(null); }
@@ -359,14 +363,14 @@ function ProductEditor({ product, categories, categoryLoadState, categoryLoadErr
     if (!product?._id) return;
     const response = await fetch(`/api/admin/products/${product._id}/media`, { method: "PATCH", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, mediaId: mediaId || null }) });
     const result = await response.json() as ApiResult<unknown>;
-    if (!response.ok || !result.success) { setMediaError(readError(result, "Media selection save nahi hua.")); return; }
+    if (!response.ok || !result.success) { setMediaError(readError(result, "The media selection could not be saved.")); return; }
     const media = mediaItems.find((item) => item.id === mediaId && item.kind === kind);
     if (kind === "thumbnail") setImageRefs(media?.publicUrl ? [media.publicUrl, ...imageRefs.split("\n").slice(1)].join("\n") : imageRefs.split("\n").slice(1).join("\n"));
     else setPromotionalVideoUrl(media?.publicUrl ?? "");
     setMediaPreview(media?.publicUrl ? { kind, url: media.publicUrl, local: false } : null);
     setMediaError("");
     setMessageStatus("success");
-    setMessage(mediaId ? "Media selection save ho gaya." : "Media reference product se remove ho gaya. Cloud file safe rakhi gayi.");
+    setMessage(mediaId ? "Media selection saved." : "The media reference was removed from the product. The cloud file was retained.");
   }
 
   function updateName(value: string) {
@@ -380,13 +384,13 @@ function ProductEditor({ product, categories, categoryLoadState, categoryLoadErr
     const pricePaise = amountToPaise(String(form.get("price") ?? ""));
     const compareText = String(form.get("compareAtPrice") ?? "").trim();
     const compareAtPricePaise = compareText ? amountToPaise(compareText) : undefined;
-    if (pricePaise === null || (compareText && compareAtPricePaise === null)) { setMessage("Price rupees mein enter karein, maximum 2 decimal places ke saath."); setBusy(false); return; }
+    if (pricePaise === null || (compareText && compareAtPricePaise === null)) { setMessage("Enter the price in rupees with no more than two decimal places."); setBusy(false); return; }
     const textList = (key: string) => String(form.get(key) ?? "").split("\n").map((item) => item.trim()).filter(Boolean);
     const categoryIds = selectedCategoryIds;
     const includedProductIds = form.getAll("includedProductIds").map(String);
     const faqLines = textList("faqs");
     const faqs = faqLines.map((line) => { const split = line.indexOf("|"); return split > 0 ? { question: line.slice(0, split).trim(), answer: line.slice(split + 1).trim() } : null; });
-    if (faqs.some((faq) => !faq)) { setMessage("FAQ ki har line mein question | answer format use karein."); setBusy(false); return; }
+    if (faqs.some((faq) => !faq)) { setMessage("Enter each FAQ on a separate line as question | answer."); setBusy(false); return; }
     const payload: Record<string, unknown> = {
       name, slug: slug || undefined, shortDescription: String(form.get("shortDescription") ?? ""), description: String(form.get("description") ?? ""),
       pricePaise, imageRefs: textList("imageRefs"),
@@ -410,7 +414,7 @@ function ProductEditor({ product, categories, categoryLoadState, categoryLoadErr
       const endpoint = product ? `/api/admin/products/${product._id}` : "/api/admin/products";
       const response = await fetch(endpoint, { method: product ? "PATCH" : "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       const result = await response.json() as ApiResult<AdminProduct>;
-      if (!response.ok || !result.success || !result.data) throw new Error(readError(result, "Product save nahi hua."));
+      if (!response.ok || !result.success || !result.data) throw new Error(readError(result, "The product could not be saved."));
       const saved = result.data;
       const file = form.get("pdfFile");
       if (file instanceof File && file.size) {
@@ -418,22 +422,21 @@ function ProductEditor({ product, categories, categoryLoadState, categoryLoadErr
         const uploaded = await fetch(`/api/admin/products/${saved._id}/assets`, { method: "POST", credentials: "same-origin", body: upload });
         const uploadResult = await uploaded.json() as ApiResult<Asset>;
         if (!uploaded.ok || !uploadResult.success) {
-          await onSaved(`Product draft create ho gaya, lekin PDF upload nahi hua: ${readError(uploadResult, "Dobara edit karke PDF upload karein.")}`);
+          await onSaved(`Product draft created, but the PDF could not be uploaded: ${readError(uploadResult, "Edit the product and upload the PDF again.")}`);
           return;
         }
       }
-      await onSaved(product ? "Product changes save ho gaye." : "Product draft create ho gaya.");
-    } catch (cause) { const text = cause instanceof Error ? cause.message : "Product save nahi hua."; setMessage(text); onError(text); }
+      await onSaved(product ? "Product changes saved." : "Product draft created.");
+    } catch (cause) { const text = cause instanceof Error ? cause.message : "The product could not be saved."; setMessage(text); onError(text); }
     finally { setBusy(false); }
   }
 
-  return <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-3 sm:p-6" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section role="dialog" aria-modal="true" aria-labelledby="product-editor-title" className="mx-auto my-3 w-full max-w-4xl rounded-3xl border border-border bg-surface p-5 shadow-2xl sm:my-8 sm:p-8">
-      <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-widest text-accent-foreground">PRODUCT EDITOR</p><h2 id="product-editor-title" className="mt-2 text-2xl font-semibold text-foreground">{product ? "Product edit karein" : "Naya product"}</h2><p className="mt-2 text-sm leading-6 text-foreground-secondary">Save karne par product draft rahega. Publish karne se pehle category, price aur fulfilment details check karein.</p></div><button type="button" onClick={onClose} aria-label="Close editor" className="grid size-10 shrink-0 place-items-center rounded-full border border-border text-lg text-foreground-secondary hover:bg-background">×</button></div>
+  return <AccessibleOverlay open onClose={onClose} titleId="product-editor-title" descriptionId="product-editor-description">
+      <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-widest text-accent-foreground">PRODUCT EDITOR</p><h2 id="product-editor-title" className="mt-2 text-2xl font-semibold text-foreground">{product ? "Edit product" : "New product"}</h2><p id="product-editor-description" className="mt-2 text-sm leading-6 text-foreground-secondary">Saving keeps the product as a draft. Check its category, price, and delivery details before publishing.</p></div><button type="button" onClick={onClose} aria-label="Close editor" className="grid size-11 shrink-0 place-items-center rounded-full border border-border text-lg text-foreground-secondary hover:bg-background">×</button></div>
       <form onSubmit={(event) => void save(event)} className="mt-7 grid gap-5 sm:grid-cols-2">
         <label className={labelClass}>Product title<input required maxLength={160} className={inputClass} value={name} onChange={(event) => updateName(event.target.value)} /></label>
         <label className={labelClass}>Slug<input required maxLength={180} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" className={inputClass} value={slug} onChange={(event) => { setSlug(event.target.value); setSlugEdited(true); }} /></label>
-        <label className={labelClass}>Product type<select className={inputClass} value={type} disabled={Boolean(product)} onChange={(event) => setType(event.target.value as ProductType)}><option value="pdf">PDF</option><option value="pdf_bundle">PDF Bundle</option><option value="call_guidance">Consultant Call</option></select>{product && <span className="text-xs font-normal text-foreground-secondary">Order snapshots ki wajah se product type change nahi kiya ja sakta.</span>}</label>
+        <label className={labelClass}>Product type<select className={inputClass} value={type} disabled={Boolean(product)} onChange={(event) => setType(event.target.value as ProductType)}><option value="pdf">PDF</option><option value="pdf_bundle">PDF Bundle</option><option value="call_guidance">Consultant Call</option></select>{product && <span className="text-xs font-normal text-foreground-secondary">Product type cannot change because existing orders retain their original details.</span>}</label>
         {type === "pdf_bundle" && <label className={labelClass}>Bundle label<select name="bundleKind" required className={inputClass} defaultValue={product?.bundleKind ?? "bundle"}><option value="starter_kit">Starter Kit</option><option value="bundle">Bundle</option></select></label>}
         <label className={`${labelClass} sm:col-span-2`}>Short description<input required maxLength={280} name="shortDescription" defaultValue={product?.shortDescription ?? ""} className={inputClass} /></label>
         <label className={`${labelClass} sm:col-span-2`}>Full description<textarea name="description" maxLength={20000} rows={5} defaultValue={product?.description ?? ""} className={`${inputClass} py-3`} /></label>
@@ -444,41 +447,40 @@ function ProductEditor({ product, categories, categoryLoadState, categoryLoadErr
           <span>Product thumbnail (optional)</span>
           {mediaPreview?.kind === "thumbnail" && <div className="relative aspect-video max-w-sm overflow-hidden rounded-xl border border-border bg-background">{mediaPreview.local || mediaPreview.url.startsWith("https://") ? <Image src={mediaPreview.url} alt="Selected product thumbnail preview" fill sizes="(max-width: 640px) 100vw, 384px" unoptimized className="object-contain" /> : null}</div>}
           <textarea name="imageRefs" rows={2} value={imageRefs} onChange={(event) => setImageRefs(event.target.value)} className={`${inputClass} py-3`} placeholder="Optional existing HTTPS image reference; one per line" aria-label="Thumbnail image references" />
-          <div className="flex flex-wrap gap-2"><input ref={thumbnailInput} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" className="sr-only" aria-label="Choose a thumbnail image file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia(file, "thumbnail"); event.currentTarget.value = ""; }} /><button type="button" disabled={mediaProgress !== null} onClick={() => thumbnailInput.current?.click()} className="min-h-10 rounded-full border border-border px-4 text-sm font-semibold text-foreground hover:bg-background disabled:opacity-50">Upload Thumbnail</button>
+          <div className="flex flex-wrap gap-2"><input ref={thumbnailInput} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" className="sr-only" aria-label="Choose a thumbnail image file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia(file, "thumbnail"); event.currentTarget.value = ""; }} /><button type="button" disabled={mediaProgress !== null} onClick={() => thumbnailInput.current?.click()} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground hover:bg-background disabled:opacity-50">Upload Thumbnail</button>
             <select aria-label="Select an existing uploaded thumbnail" value="" onChange={(event) => { if (event.target.value) void chooseSavedMedia("thumbnail", event.target.value); }} className={`${inputClass} w-auto`}><option value="">Choose saved thumbnail...</option>{mediaItems.filter((item) => item.kind === "thumbnail" && item.status === "ready" && item.publicUrl).map((item) => <option key={item.id} value={item.id}>{item.fileName}</option>)}</select>
-            <button type="button" onClick={() => { if (window.confirm("Remove the product thumbnail reference? The stored media file will remain available.")) void chooseSavedMedia("thumbnail", ""); }} className="min-h-10 rounded-full border border-border px-4 text-sm font-semibold text-foreground-secondary hover:bg-background">Remove thumbnail</button></div>
+            <button type="button" onClick={() => { if (window.confirm("Remove the product thumbnail reference? The stored media file will remain available.")) void chooseSavedMedia("thumbnail", ""); }} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground-secondary hover:bg-background">Remove thumbnail</button></div>
           {!product && <p className="text-xs font-normal text-foreground-secondary">Save this draft first to enable cloud uploads. No file is uploaded until you select one.</p>}
-          {mediaProgress !== null && mediaPreview?.kind === "thumbnail" && <div role="status" aria-live="polite"><progress className="w-full" max={100} value={mediaProgress} /><span className="text-xs text-foreground-secondary">Uploading and verifying: {mediaProgress}%</span></div>}
+          {mediaProgress !== null && mediaPreview?.kind === "thumbnail" && <div role="status" aria-live="polite"><progress className="w-full" max={100} value={mediaProgress} aria-label="Thumbnail transfer progress" /><span className="text-xs text-foreground-secondary">{mediaProgress === 100 ? "Transfer complete. Verifying thumbnail with server..." : `Transferring thumbnail: ${mediaProgress}%`}</span></div>}
           {!mediaPreview?.kind && !imageRefs && <p className="text-xs text-foreground-secondary">No thumbnail is set; catalogue cards will show the branded fallback.</p>}
         </div>
         <div className={`${labelClass} sm:col-span-2`}>
           <span>Promotional video (optional)</span>
           {mediaPreview?.kind === "promotional_video" && <video src={mediaPreview.url} controls preload="none" playsInline className="aspect-video max-w-xl rounded-xl border border-border bg-black" poster={imageRefs.split("\n")[0] || undefined} aria-label="Selected promotional video preview" />}
           <input type="url" name="promotionalVideoUrl" placeholder="https://... (existing references remain supported)" value={promotionalVideoUrl} onChange={(event) => setPromotionalVideoUrl(event.target.value)} className={inputClass} />
-          <div className="flex flex-wrap gap-2"><input ref={videoInput} type="file" accept="video/mp4,video/webm,.mp4,.webm" className="sr-only" aria-label="Choose a promotional video file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia(file, "promotional_video"); event.currentTarget.value = ""; }} /><button type="button" disabled={mediaProgress !== null} onClick={() => videoInput.current?.click()} className="min-h-10 rounded-full border border-border px-4 text-sm font-semibold text-foreground hover:bg-background disabled:opacity-50">Upload Promotional Video</button>
+          <div className="flex flex-wrap gap-2"><input ref={videoInput} type="file" accept="video/mp4,video/webm,.mp4,.webm" className="sr-only" aria-label="Choose a promotional video file" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadMedia(file, "promotional_video"); event.currentTarget.value = ""; }} /><button type="button" disabled={mediaProgress !== null} onClick={() => videoInput.current?.click()} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground hover:bg-background disabled:opacity-50">Upload Promotional Video</button>
             <select aria-label="Select an existing uploaded promotional video" value="" onChange={(event) => { if (event.target.value) void chooseSavedMedia("promotional_video", event.target.value); }} className={`${inputClass} w-auto`}><option value="">Choose saved video...</option>{mediaItems.filter((item) => item.kind === "promotional_video" && item.status === "ready" && item.publicUrl).map((item) => <option key={item.id} value={item.id}>{item.fileName}</option>)}</select>
-            <button type="button" onClick={() => { if (window.confirm("Remove the promotional video reference? The stored media file will remain available.")) void chooseSavedMedia("promotional_video", ""); }} className="min-h-10 rounded-full border border-border px-4 text-sm font-semibold text-foreground-secondary hover:bg-background">Remove video</button></div>
-          {mediaProgress !== null && mediaPreview?.kind === "promotional_video" && <p role="status" aria-live="polite" className="text-xs text-foreground-secondary">Uploading and verifying: {mediaProgress}%</p>}
+            <button type="button" onClick={() => { if (window.confirm("Remove the promotional video reference? The stored media file will remain available.")) void chooseSavedMedia("promotional_video", ""); }} className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold text-foreground-secondary hover:bg-background">Remove video</button></div>
+          {mediaProgress !== null && mediaPreview?.kind === "promotional_video" && <p role="status" aria-live="polite" className="text-xs text-foreground-secondary">{mediaProgress === 100 ? "Transfer complete. Verifying video with server..." : `Transferring video: ${mediaProgress}%`}</p>}
           <p className="text-xs font-normal text-foreground-secondary">MP4 and WebM only. Preview stays paused until Play; the product video is marketing media, not a paid download.</p>
         </div>
         {mediaError && <p className="sm:col-span-2 rounded-xl border border-red-700/20 bg-red-500/10 px-4 py-3 text-sm text-foreground" role="alert">{mediaError}</p>}
         {type === "pdf" && <>
-          <label className={`${labelClass} sm:col-span-2`}>Private PDF asset<select className={inputClass} value={assetId} onChange={(event) => setAssetId(event.target.value)}><option value="">{assets.length ? "Asset select karein" : "Abhi PDF asset nahi hai"}</option>{assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.fileName} · {asset.version.slice(0, 8)} · {asset.status}</option>)}</select><span className="text-xs font-normal text-foreground-secondary">Master PDF private R2 bucket mein rahegi. Customer ko yahan se public URL nahi milta.</span></label>
-          <label className={`${labelClass} sm:col-span-2`}>PDF upload<input type="file" name="pdfFile" accept="application/pdf,.pdf" className={`${inputClass} py-2`} /><span className="text-xs font-normal text-foreground-secondary">Nayi PDF upload karne par woh active version banegi. Purane versions history ke liye preserve honge.</span></label>
+          <label className={`${labelClass} sm:col-span-2`}>Private PDF asset<select className={inputClass} value={assetId} onChange={(event) => setAssetId(event.target.value)}><option value="">{assets.length ? "Select an asset" : "No PDF assets available"}</option>{assets.map((asset) => <option key={asset.id} value={asset.id}>{asset.fileName} · {asset.version.slice(0, 8)} · {asset.status}</option>)}</select><span className="text-xs font-normal text-foreground-secondary">The master PDF stays in the private R2 bucket. Customers do not receive a public URL here.</span></label>
+          <label className={`${labelClass} sm:col-span-2`}>PDF upload<input type="file" name="pdfFile" accept="application/pdf,.pdf" className={`${inputClass} py-2`} /><span className="text-xs font-normal text-foreground-secondary">A new upload becomes the active version. Previous versions remain available for purchase history.</span></label>
         </>}
-        {type === "pdf_bundle" && <label className={`${labelClass} sm:col-span-2`}>Bundle ke PDF products<select multiple name="includedProductIds" required defaultValue={product?.includedProductIds ?? []} className={`${inputClass} h-36 py-2`}>{products.filter((item) => item.productType === "pdf" && item.publicationStatus !== "archived" && item._id !== product?._id).map((item) => <option key={item._id} value={item._id}>{item.name} · {statusLabels[item.publicationStatus]}</option>)}</select><span className="text-xs font-normal text-foreground-secondary">Sirf alag PDF products; nested bundles aur Consultant Call allow nahi hain.</span></label>}
+        {type === "pdf_bundle" && <label className={`${labelClass} sm:col-span-2`}>PDF products in this bundle<select multiple name="includedProductIds" required defaultValue={product?.includedProductIds ?? []} className={`${inputClass} h-36 py-2`}>{products.filter((item) => item.productType === "pdf" && item.publicationStatus !== "archived" && item._id !== product?._id).map((item) => <option key={item._id} value={item._id}>{item.name} · {statusLabels[item.publicationStatus]}</option>)}</select><span className="text-xs font-normal text-foreground-secondary">Select separate PDF products. Nested bundles and Consultant Calls are not supported.</span></label>}
         {type === "call_guidance" && <><label className={labelClass}>Call duration (minutes)<input type="number" min={1} max={480} name="callDurationMinutes" required defaultValue={product?.callDurationMinutes ?? 45} className={inputClass} /></label><label className={`${labelClass} sm:col-span-2`}>Fulfilment instructions<textarea name="fulfilmentInstructions" required maxLength={4000} rows={3} defaultValue={product?.fulfilmentInstructions ?? ""} className={`${inputClass} py-3`} /></label></>}
-        <label className={`${labelClass} sm:col-span-2`}>Features (har line par ek)<textarea name="features" rows={3} defaultValue={product?.features?.join("\n")} className={`${inputClass} py-3`} /></label>
-        <label className={`${labelClass} sm:col-span-2`}>Benefits (har line par ek)<textarea name="benefits" rows={3} defaultValue={product?.benefits?.join("\n")} className={`${inputClass} py-3`} /></label>
-        <label className={`${labelClass} sm:col-span-2`}>Included content (har line par ek)<textarea name="includedContent" rows={3} defaultValue={product?.includedContent?.join("\n")} className={`${inputClass} py-3`} /></label>
+        <label className={`${labelClass} sm:col-span-2`}>Features (one per line)<textarea name="features" rows={3} defaultValue={product?.features?.join("\n")} className={`${inputClass} py-3`} /></label>
+        <label className={`${labelClass} sm:col-span-2`}>Benefits (one per line)<textarea name="benefits" rows={3} defaultValue={product?.benefits?.join("\n")} className={`${inputClass} py-3`} /></label>
+        <label className={`${labelClass} sm:col-span-2`}>Included content (one per line)<textarea name="includedContent" rows={3} defaultValue={product?.includedContent?.join("\n")} className={`${inputClass} py-3`} /></label>
         <label className={`${labelClass} sm:col-span-2`}>FAQs (har line: question | answer)<textarea name="faqs" rows={4} defaultValue={product?.faqs?.map((faq) => `${faq.question} | ${faq.answer}`).join("\n")} className={`${inputClass} py-3`} /></label>
         <label className={`${labelClass} sm:col-span-2`}>SEO title<input name="seoTitle" maxLength={70} defaultValue={product?.seo?.title ?? ""} className={inputClass} /></label>
         <label className={`${labelClass} sm:col-span-2`}>SEO description<textarea name="seoDescription" maxLength={180} rows={2} defaultValue={product?.seo?.description ?? ""} className={`${inputClass} py-3`} /></label>
         <label className="flex min-h-11 items-center gap-3 text-sm font-medium text-foreground"><input type="checkbox" name="featured" defaultChecked={product?.featured ?? false} className="size-4 accent-primary" />Featured product</label>
         <label className={labelClass}>Display order<input type="number" name="displayOrder" min={0} max={1000000} defaultValue={product?.displayOrder ?? 0} className={inputClass} /></label>
         {message && <p className={`sm:col-span-2 rounded-xl border px-4 py-3 text-sm text-foreground ${messageStatus === "success" ? "border-emerald-700/20 bg-emerald-500/10" : "border-red-700/20 bg-red-500/10"}`} role={messageStatus === "success" ? "status" : "alert"}>{message}</p>}
-        <div className="sm:col-span-2 flex flex-wrap justify-end gap-3 border-t border-border pt-5"><button type="button" onClick={onClose} className="min-h-11 rounded-full border border-border px-5 text-sm font-semibold text-foreground">Cancel</button><button type="submit" disabled={busy} className="min-h-11 rounded-full bg-primary px-6 text-sm font-semibold text-background hover:bg-primary-hover disabled:opacity-50">{busy ? "Save ho raha hai…" : "Draft save karein"}</button></div>
+        <div className="sm:col-span-2 flex flex-wrap justify-end gap-3 border-t border-border pt-5"><button type="button" onClick={onClose} className="min-h-11 rounded-full border border-border px-5 text-sm font-semibold text-foreground">Cancel</button><button type="submit" disabled={busy} className="min-h-11 rounded-full bg-primary px-6 text-sm font-semibold text-background hover:bg-primary-hover disabled:opacity-50">{busy ? "Saving…" : "Save draft"}</button></div>
       </form>
-    </section>
-  </div>;
+  </AccessibleOverlay>;
 }

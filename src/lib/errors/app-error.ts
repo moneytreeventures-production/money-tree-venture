@@ -39,31 +39,31 @@ export class ValidationError extends ApplicationError {
 
 export class AuthenticationError extends ApplicationError {
   constructor(cause?: unknown) {
-    super("Aage badhne ke liye sign in karein.", { code: "AUTHENTICATION_REQUIRED", statusCode: 401, cause });
+    super("Please sign in to continue.", { code: "AUTHENTICATION_REQUIRED", statusCode: 401, cause });
   }
 }
 
 export class WebhookSignatureError extends ApplicationError {
   constructor() {
-    super("Webhook signature verify nahi ho saki.", { code: "WEBHOOK_SIGNATURE_INVALID", statusCode: 401 });
+    super("The webhook signature could not be verified.", { code: "WEBHOOK_SIGNATURE_INVALID", statusCode: 401 });
   }
 }
 
 export class AuthorizationError extends ApplicationError {
   constructor(cause?: unknown) {
-    super("Aapko is action ki permission nahi hai.", { code: "FORBIDDEN", statusCode: 403, cause });
+    super("You do not have permission to perform this action.", { code: "FORBIDDEN", statusCode: 403, cause });
   }
 }
 
 export class NotFoundError extends ApplicationError {
   constructor(cause?: unknown) {
-    super("Yeh jaankari nahi mili.", { code: "NOT_FOUND", statusCode: 404, cause });
+    super("The requested information was not found.", { code: "NOT_FOUND", statusCode: 404, cause });
   }
 }
 
 export class ConflictError extends ApplicationError {
   constructor(cause?: unknown) {
-    super(typeof cause === "string" ? cause : "Yeh request abhi complete nahi ho sakti.", {
+    super(typeof cause === "string" ? cause : "This request cannot be completed right now.", {
       code: "CONFLICT", statusCode: 409, ...(typeof cause === "string" ? {} : { cause }),
     });
   }
@@ -71,19 +71,19 @@ export class ConflictError extends ApplicationError {
 
 export class RateLimitError extends ApplicationError {
   constructor(cause?: unknown) {
-    super("Aapne requests jaldi-jaldi bheji hain. Thodi der baad try karein.", { code: "RATE_LIMITED", statusCode: 429, cause });
+    super("Too many requests. Please try again later.", { code: "RATE_LIMITED", statusCode: 429, cause });
   }
 }
 
 export class DatabaseError extends ApplicationError {
   constructor(cause?: unknown) {
-    super("Service abhi available nahi hai. Thodi der baad try karein.", { code: "DATABASE_UNAVAILABLE", statusCode: 503, cause });
+    super("The service is temporarily unavailable. Please try again later.", { code: "DATABASE_UNAVAILABLE", statusCode: 503, cause });
   }
 }
 
 export class ExternalServiceError extends ApplicationError {
   constructor(cause?: unknown) {
-    super("Abhi request complete nahi ho paayi. Thodi der baad try karein.", { code: "EXTERNAL_SERVICE_ERROR", statusCode: 502, cause });
+    super("We could not complete your request. Please try again later.", { code: "EXTERNAL_SERVICE_ERROR", statusCode: 502, cause });
   }
 }
 
@@ -93,7 +93,7 @@ export class IntegrationConfigurationError extends ApplicationError {
     super("This service is temporarily unavailable because required configuration is incomplete.", {
       code: `${provider === "Cashfree" ? "CASHFREE" : provider === "Better Auth" ? "BETTER_AUTH" : provider === "MongoDB" ? "MONGODB" : provider === "Tax" ? "TAX" : provider === "Public product media" ? "PUBLIC_MEDIA" : "R2"}_CONFIGURATION_ERROR`,
       statusCode: 503,
-      details: missingKeys.map((field) => ({ field, message: "Yeh configuration zaroori hai." })),
+      details: missingKeys.map((field) => ({ field, message: "This configuration is required." })),
     });
   }
 }
@@ -102,7 +102,7 @@ export class IntegrationConfigurationError extends ApplicationError {
 export class ProviderCommunicationError extends ApplicationError {
   constructor(provider: "Cloudflare R2" | "Cashfree", kind: "network" | "rejected") {
     const prefix = provider === "Cashfree" ? "CASHFREE" : "R2";
-    super("Abhi request complete nahi ho paayi. Thodi der baad try karein.", {
+    super("We could not complete your request. Please try again later.", {
       code: `${prefix}_${kind === "network" ? "NETWORK" : "PROVIDER"}_ERROR`,
       statusCode: 502,
     });
@@ -111,6 +111,6 @@ export class ProviderCommunicationError extends ApplicationError {
 
 export class InternalServerError extends ApplicationError {
   constructor(cause?: unknown) {
-    super("Kuch gadbad ho gayi. Dobara try karein.", { code: "INTERNAL_ERROR", statusCode: 500, operational: false, cause });
+    super("Something went wrong. Please try again.", { code: "INTERNAL_ERROR", statusCode: 500, operational: false, cause });
   }
 }

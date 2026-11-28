@@ -88,10 +88,12 @@ export const serverEnvSchema = z
     BETTER_AUTH_URL: optionalHttpUrl,
     GOOGLE_CLIENT_ID: nonEmptyString,
     GOOGLE_CLIENT_SECRET: nonEmptyString,
+    ADMIN_ALLOWED_EMAILS: z.string().trim().refine((value) => !value || value.split(",").every((part) => emailAddress.safeParse(part.trim()).success), "must contain only comma-separated email addresses").optional(),
 
     CASHFREE_CLIENT_ID: nonEmptyString,
     CASHFREE_CLIENT_SECRET: nonEmptyString,
     CASHFREE_ENVIRONMENT: z.enum(["sandbox", "production"]).optional(),
+    PAYMENT_COLLECTION_MODE: z.enum(["disabled", "sandbox", "live"]).optional(),
     CASHFREE_API_VERSION: apiVersion,
     CASHFREE_WEBHOOK_VERSION: apiVersion,
     CASHFREE_RETURN_URL_BASE: optionalHttpUrl,
@@ -118,7 +120,6 @@ export const serverEnvSchema = z
 
     OUTBOX_WORKER_SECRET: z.string().trim().min(32, "must be at least 32 characters").optional(),
     DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(1).max(900).default(60),
-    TAX_RATE_BPS: z.string().regex(/^\d+$/, "must be an integer tax rate in basis points").transform(Number).pipe(z.number().int().min(0).max(10_000)).optional(),
   })
   .superRefine((values, context) => {
     for (const group of integrationGroups) {

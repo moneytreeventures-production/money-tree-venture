@@ -17,6 +17,16 @@ function hasPublicHttpsOrigin(): boolean {
   }
 }
 
+function isProductionSeoDeploy(): boolean {
+  try {
+    const url = new URL(process.env.APP_URL ?? "");
+    return url.origin === "https://moneytreeventure.com" && url.pathname === "/" &&
+      !url.username && !url.password && !url.search && !url.hash &&
+      (!process.env.CONTEXT || process.env.CONTEXT === "production") &&
+      (process.env.NETLIFY !== "true" || process.env.CONTEXT === "production");
+  } catch { return false; }
+}
+
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
@@ -27,6 +37,7 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
+          ...(!isProductionSeoDeploy() ? [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] : []),
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

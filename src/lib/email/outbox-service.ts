@@ -46,8 +46,8 @@ export function buildPurchaseConfirmation(input: { name: string; orderReference:
   const total = formatINR(input.totalPaise);
   return {
     to: "", subject: `Payment confirmed - ${input.orderReference}`,
-    text: `Hello ${input.name},\n\nPayment for order ${input.orderReference} is confirmed.\n\nItems:\n${linesText}\n\nTotal paid: ${total}\nView your order and access details in your account: ${input.dashboardUrl}\n\nMoneyTreeVentures`,
-    html: `<p>Hello ${name},</p><p>Payment for order <strong>${ref}</strong> is confirmed.</p><ul>${linesHtml}</ul><p>Total paid: <strong>${escapeHtml(total)}</strong></p><p><a href="${link}">View your order and access details</a></p><p>MoneyTreeVentures</p>`,
+    text: `Hello ${input.name},\n\nPayment for order ${input.orderReference} is confirmed.\n\nItems:\n${linesText}\n\nTotal paid: ${total}\nView your order and access details in your account: ${input.dashboardUrl}\n\nMoney Tree Venture`,
+    html: `<p>Hello ${name},</p><p>Payment for order <strong>${ref}</strong> is confirmed.</p><ul>${linesHtml}</ul><p>Total paid: <strong>${escapeHtml(total)}</strong></p><p><a href="${link}">View your order and access details</a></p><p>Money Tree Venture</p>`,
   };
 }
 export function buildBookingMessage(input: { name: string; reference: string; status: string; instructions: string; dashboardUrl: string }): ResendMessage {
@@ -65,8 +65,8 @@ export function buildBookingMessage(input: { name: string; reference: string; st
   const link = escapeHtml(input.dashboardUrl);
   return {
     to: "", subject: `Consultation booking update - ${input.reference}`,
-    text: `Hello ${input.name},\n\n${description}\nBooking reference: ${input.reference}\n${input.instructions}\n\n${input.dashboardUrl}\nMoneyTreeVentures`,
-    html: `<p>Hello ${name},</p><p>${escapeHtml(description)}</p><p>Booking reference: <strong>${reference}</strong></p>${instructions ? `<p>${instructions}</p>` : ""}<p><a href="${link}">View booking details</a></p><p>MoneyTreeVentures</p>`,
+    text: `Hello ${input.name},\n\n${description}\nBooking reference: ${input.reference}\n${input.instructions}\n\n${input.dashboardUrl}\nMoney Tree Venture`,
+    html: `<p>Hello ${name},</p><p>${escapeHtml(description)}</p><p>Booking reference: <strong>${reference}</strong></p>${instructions ? `<p>${instructions}</p>` : ""}<p><a href="${link}">View booking details</a></p><p>Money Tree Venture</p>`,
   };
 }
 export function buildRefundConfirmation(input: { name: string; orderReference: string; amountPaise: number; dashboardUrl: string }): ResendMessage {
@@ -77,49 +77,64 @@ export function buildRefundConfirmation(input: { name: string; orderReference: s
   const link = escapeHtml(input.dashboardUrl);
   return {
     to: "", subject: `Refund confirmed - ${input.orderReference}`,
-    text: `Hello ${input.name},\n\nCashfree has confirmed a refund of ${amount} for order ${input.orderReference}. The credit may take some time to appear in your bank account or payment method. View order details in your account: ${input.dashboardUrl}\n\nMoneyTreeVentures`,
-    html: `<p>Hello ${name},</p><p>Cashfree has confirmed a refund of <strong>${safeAmount}</strong> for order <strong>${reference}</strong>. The credit may take some time to appear in your bank account or payment method.</p><p><a href="${link}">View order details</a></p><p>MoneyTreeVentures</p>`,
+    text: `Hello ${input.name},\n\nCashfree has confirmed a refund of ${amount} for order ${input.orderReference}. The credit may take some time to appear in your bank account or payment method. View order details in your account: ${input.dashboardUrl}\n\nMoney Tree Venture`,
+    html: `<p>Hello ${name},</p><p>Cashfree has confirmed a refund of <strong>${safeAmount}</strong> for order <strong>${reference}</strong>. The credit may take some time to appear in your bank account or payment method.</p><p><a href="${link}">View order details</a></p><p>Money Tree Venture</p>`,
   };
 }
-async function sendOutboxEmail(event: OutboxEvent & { _id: Types.ObjectId }): Promise<void> {
+export function transactionalRecipientAllowed(input: { gatewayEnvironment?: string; recipient: string; allowed?: string }): boolean {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.recipient)) return false;
+  if (input.gatewayEnvironment === "production") return true;
+  if (input.gatewayEnvironment !== "sandbox") return false;
+  return (input.allowed ?? "").split(",").some((value) => value.trim().toLowerCase() === input.recipient.trim().toLowerCase());
+}
+
+/** Only the worker holding the current attempt may finish or reschedule it. */
+export function outboxClaimWriteFilter(event: Pick<OutboxEvent, "attemptCount"> & { _id: Types.ObjectId }) {
+  return { _id: event._id, status: "processing" as const, attemptCount: event.attemptCount };
+}
+
+async function sendOutboxEmail(event: OutboxEvent & { _id: Types.ObjectId }): Promise<"sent" | "suppressed"> {
   const payload = event.payload;
   const orderId = payload.orderId;
   if (!payload.userId || !orderId) throw new Error("OUTBOX_REFERENCE_MISSING");
-  const order = await OrderModel.findOne({ _id: orderId, userId: payload.userId }).select("orderReference customerSnapshot orderStatus paymentStatus lines totalPaise").lean().exec();
+  const order = await OrderModel.findOne({ _id: orderId, userId: payload.userId }).select("orderReference customerSnapshot orderStatus paymentStatus gatewayEnvironment lines totalPaise").lean().exec();
   if (!order) throw new Error("ORDER_NOT_FOUND");
   const dashboardUrl = new URL("/account", getServerEnv().APP_URL).toString();
   if (event.eventType === "purchase_confirmation") {
-    if (!isTransactionalEmailEligible({ eventType: event.eventType, orderStatus: order.orderStatus, paymentStatus: order.paymentStatus })) return;
+    if (!isTransactionalEmailEligible({ eventType: event.eventType, orderStatus: order.orderStatus, paymentStatus: order.paymentStatus })) return "suppressed";
     // Ignore legacy per-entitlement events so queued old events cannot send one email per PDF.
-    if (event.aggregateType !== "order" || !event.aggregateId.equals(orderId)) return;
+    if (event.aggregateType !== "order" || !event.aggregateId.equals(orderId)) return "suppressed";
     const message = buildPurchaseConfirmation({
       name: order.customerSnapshot.name, orderReference: order.orderReference, dashboardUrl,
       lines: order.lines.map((line) => ({ productName: line.productName, quantity: line.quantity, lineTotalPaise: line.lineTotalPaise })),
       totalPaise: order.totalPaise,
     });
     message.to = order.customerSnapshot.email;
+    if (!transactionalRecipientAllowed({ gatewayEnvironment: order.gatewayEnvironment, recipient: message.to, allowed: process.env.EMAIL_TEST_RECIPIENTS })) return "suppressed";
     await sendResendMessage(message, event.dedupeKey ?? `outbox/${event._id.toString()}`);
-    return;
+    return "sent";
   }
   if (event.eventType === "refund_confirmation") {
     if (!payload.refundId) throw new Error("REFUND_REFERENCE_MISSING");
     const refund = await RefundModel.findOne({ _id: payload.refundId, userId: payload.userId, orderId, status: "success" })
       .select("amountPaise status").lean().exec();
-    if (!refund || !isTransactionalEmailEligible({
+    if (!refund) throw new Error("REFUND_NOT_FOUND");
+    if (!isTransactionalEmailEligible({
       eventType: event.eventType, orderStatus: order.orderStatus, paymentStatus: order.paymentStatus, refundStatus: refund.status,
-    })) return;
+    })) return "suppressed";
     const message = buildRefundConfirmation({
       name: order.customerSnapshot.name, orderReference: order.orderReference,
       amountPaise: refund.amountPaise, dashboardUrl,
     });
     message.to = order.customerSnapshot.email;
+    if (!transactionalRecipientAllowed({ gatewayEnvironment: order.gatewayEnvironment, recipient: message.to, allowed: process.env.EMAIL_TEST_RECIPIENTS })) return "suppressed";
     await sendResendMessage(message, event.dedupeKey ?? `outbox/${event._id.toString()}`);
-    return;
+    return "sent";
   }
   if (!payload.bookingId) throw new Error("BOOKING_REFERENCE_MISSING");
   const booking = await BookingModel.findOne({ _id: payload.bookingId, userId: payload.userId, orderId }).lean().exec();
   if (!booking) throw new Error("BOOKING_NOT_FOUND");
-  if (!isTransactionalEmailEligible({ eventType: event.eventType, orderStatus: order.orderStatus, paymentStatus: order.paymentStatus, bookingStatus: booking.status })) return;
+  if (!isTransactionalEmailEligible({ eventType: event.eventType, orderStatus: order.orderStatus, paymentStatus: order.paymentStatus, bookingStatus: booking.status })) return "suppressed";
   const message = buildBookingMessage({
     name: order.customerSnapshot.name,
     reference: booking.bookingReference,
@@ -128,19 +143,22 @@ async function sendOutboxEmail(event: OutboxEvent & { _id: Types.ObjectId }): Pr
     dashboardUrl,
   });
   message.to = order.customerSnapshot.email;
+  if (!transactionalRecipientAllowed({ gatewayEnvironment: order.gatewayEnvironment, recipient: message.to, allowed: process.env.EMAIL_TEST_RECIPIENTS })) return "suppressed";
   await sendResendMessage(message, event.dedupeKey ?? `outbox/${event._id.toString()}`);
+  return "sent";
 }
 
 /** Claims and sends a bounded batch. Email API idempotency protects retries after ambiguous network failures. */
-export async function processEmailOutboxBatch(limit = 10): Promise<{ sent: number; retried: number; deadLetter: number }> {
+export async function processEmailOutboxBatch(limit = 10, createdAfter?: Date): Promise<{ sent: number; suppressed: number; retried: number; deadLetter: number }> {
   await connectToDatabase();
   const boundedLimit = Math.max(1, Math.min(Math.trunc(limit), 25));
-  const counters = { sent: 0, retried: 0, deadLetter: 0 };
+  const counters = { sent: 0, suppressed: 0, retried: 0, deadLetter: 0 };
   for (let index = 0; index < boundedLimit; index += 1) {
     const now = new Date();
     const claimed = await OutboxEventModel.findOneAndUpdate(
       {
         eventType: { $in: emailEventTypes },
+        ...(createdAfter ? { createdAt: { $gt: createdAfter } } : {}),
         $or: [
           { status: { $in: ["pending", "retry"] }, nextAttemptAt: { $lte: now } },
           { status: "processing", updatedAt: { $lte: new Date(now.getTime() - 5 * 60_000) } },
@@ -151,13 +169,18 @@ export async function processEmailOutboxBatch(limit = 10): Promise<{ sent: numbe
     ).lean().exec() as unknown as (OutboxEvent & { _id: Types.ObjectId }) | null;
     if (!claimed) break;
     try {
-      await sendOutboxEmail(claimed);
-      await OutboxEventModel.updateOne({ _id: claimed._id, status: "processing" }, { $set: { status: "sent", processedAt: new Date(), lastErrorCode: null, lastErrorSummary: null } });
-      counters.sent += 1;
+      const outcome = await sendOutboxEmail(claimed);
+      if (outcome === "suppressed") {
+        const result = await OutboxEventModel.updateOne(outboxClaimWriteFilter(claimed), { $set: { status: "dead_letter", processedAt: new Date(), lastErrorCode: "EMAIL_SUPPRESSED", lastErrorSummary: "Email was intentionally suppressed." } });
+        if (result.matchedCount) counters.suppressed += 1;
+        continue;
+      }
+      const result = await OutboxEventModel.updateOne(outboxClaimWriteFilter(claimed), { $set: { status: "sent", processedAt: new Date(), lastErrorCode: null, lastErrorSummary: null } });
+      if (result.matchedCount) counters.sent += 1;
     } catch (error) {
       const dead = claimed.attemptCount >= maxAttempts;
       const delay = outboxRetryDelayMs(claimed.attemptCount);
-      await OutboxEventModel.updateOne({ _id: claimed._id, status: "processing" }, {
+      const result = await OutboxEventModel.updateOne(outboxClaimWriteFilter(claimed), {
         $set: {
           status: dead ? "dead_letter" : "retry",
           nextAttemptAt: new Date(Date.now() + delay),
@@ -165,7 +188,7 @@ export async function processEmailOutboxBatch(limit = 10): Promise<{ sent: numbe
           lastErrorSummary: "Transactional email delivery failed.",
         },
       });
-      counters[dead ? "deadLetter" : "retried"] += 1;
+      if (result.matchedCount) counters[dead ? "deadLetter" : "retried"] += 1;
     }
   }
   return counters;
